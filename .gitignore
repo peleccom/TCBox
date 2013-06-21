@@ -1,0 +1,12 @@
+*.dcu
+*.~*~
+*.local
+*.identcache
+__history
+*.drc
+*.map
+*.exe
+*.dll
+*.wfx
+AccessConfig.pas
+bin/*
