@@ -5,6 +5,8 @@ library TCBox;
 
 uses
   Windows,
+  Vcl.Dialogs,
+  Vcl.Controls,
   FSPLUGIN,
   classes,
   sysutils,
@@ -44,12 +46,9 @@ var
   PluginNumber: integer;
 
   // oauth
-
-  Key : String;
-  Secret : String;
   Consumer : TOAuthConsumer;
   ARequest : TOAuthRequest ;
-  HMAC :TOAuthSignatureMethod;
+  Sign :TOAuthSignatureMethod;
   HTTPStream : TStringStream;
   Response : String;
   Token : TOAuthToken;
@@ -79,23 +78,24 @@ var
   LHandler: TIdSSLIOHandlerSocketOpenSSL;
   Strs : TMemoryStream;
   s:String ;
+  sl:TStringList;
 begin
   URL := 'https://api.dropbox.com/1/oauth/request_token';
 // Create all objects
-  Consumer := TOAuthConsumer.Create(APP_KEY, APP_Secret);
-  HMAC := TOAuthSignatureMethod_HMAC_SHA1.Create;
+  Consumer := TOAuthConsumer.Create(APP_KEY, APP_SECRET);
+  Sign := TOAuthSignatureMethod_HMAC_SHA1.Create;
 
   ARequest := TOAuthRequest.Create(URL);
 
   ARequest := ARequest.FromConsumerAndToken(Consumer, nil, URL);
-  ARequest.Sign_Request(HMAC, Consumer, nil);
+  ARequest.Sign_Request(Sign, Consumer, nil);
   HTTPStream := TStringStream.Create('');
   LHandler := TIdSSLIOHandlerSocketOpenSSL.Create(nil);
   URL := URL + '?' + ARequest.GetString;
   idHTTP1 := TIdHTTP.Create(nil);
-
 IdHTTP1.IOHandler:=LHandler;
 try
+sl := TStringList.Create;
 Response := idHTTP1.Get(URL);
   except
     on E : Exception do
@@ -127,16 +127,24 @@ var
 Callback_URL, URL :string;
 begin
 URL := 'https://www.dropbox.com/1/oauth/authorize';
-Callback_URL := 'bsuirsched.appspot.com' ;
-URL := URL + '?' + 'oauth_token=' + oauth_token + '&' + 'oauth_token_secret=' + oauth_token_secret +
-'&oauth_callback=' + TOAuthUtil.urlEncodeRFC3986(Callback_URL);
+URL := URL + '?' + 'oauth_token=' + oauth_token ;
          MessageBox(0,PChar(URL),'',0);
   ShellExecute(0,
                PChar('open'),
-               PChar(URL),    // <--- здесь указать урл
+               PChar(URL),
                Nil,
                Nil,
                SW_SHOW);
+end;
+
+function confirm():Boolean;
+begin
+if mrYes = MessageDlg('Continue?', mtwarning, [mbYes, mbNo], 0) then
+  begin
+        result :=  True;
+  end
+else
+result := False; //go out
 end;
 
 procedure Accept();
@@ -146,36 +154,67 @@ URL: string;
 begin
 URL := 'https://api.dropbox.com/1/oauth/access_token';
 Consumer := nil;
-Consumer := TOAuthConsumer.Create(Key, Secret,
-'http://www.chuckbeasley.com');
+Consumer := TOAuthConsumer.Create(APP_KEY,APP_SECRET);
 ARequest.HTTPURL := URL;
 ARequest := ARequest.FromConsumerAndToken(Consumer, Token, URL);
-ARequest.Sign_Request(HMAC, Consumer, Token);
+ARequest.Sign_Request(Sign, Consumer, Token);
 URL := URL + '?' + ARequest.GetString;
 Response := idHTTP1.Get(URL);
-endpos := AnsiPos('&oauth_token_secret=', Response);
+MessageBox(0,PChar(Response),'',0);
+endpos := AnsiPos('&oauth_token=', Response);
 oauth_token :='';
-oauth_token := Copy(Response, 13, endpos-13);
+oauth_token_secret := Copy(Response, 20, endpos-20);
 Response := Copy(Response, endpos, Length(Response));
-
-oauth_token_secret := Copy(Response, 21, Length(Response));
+oauth_token := Copy(Response, 14, 15);
+MessageBox(0,PChar(oauth_token +'  '+oauth_token_secret),'',0);
 Token := TOAuthToken.Create(oauth_token, oauth_token_secret);
+end;
+
+procedure process();
+var
+StringList: TStringList;
+URL: string;
+begin
+URL := 'https://api.dropbox.com/1/account/info';
+Consumer := nil;
+Consumer := TOAuthConsumer.Create(APP_KEY, APP_SECRET);
+ARequest.HTTPURL := URL;
+ARequest := ARequest.FromConsumerAndToken(Consumer, Token, URL);
+ARequest.Sign_Request(Sign, Consumer, Token);
+URL := URL + '?' + ARequest.GetString;
+MessageBox(0,PChar(URl),'',0);
+Response := idHTTP1.Get(URL);
+MessageBox(0,PChar(Response),'',0);
 end;
 { ------------------------------------------------------------------ }
 
 function FsFindFirst (Path : PChar; var FindData : tWIN32FINDDATA) : thandle; stdcall;
 var
-s: AnsiString;
+s:AnsiString;
+s1: String;
 begin
   request_token_flag := True;
   Request();
   Auth();
+  if Confirm() then
+      Accept();
+  Try
+  process();
+  except
+    on E : Exception do
+    begin
+      s1 := E.ClassName+' поднята ошибка, с сообщением : '+E.Message;
+      MessageBox(0,PChar(s1),'',0);
+    end;
+  end;
 
   if request_token_flag then
   begin
     result := REQUES_TOKEN_HANDLER;
-    s:='Accept token' ;
-    StrPCopy(FindData.cFileName,s);
+    Fillchar(FindData, sizeof(Win32_find_data), 0);
+    FindData.dwFileAttributes := FILE_ATTRIBUTE_DIRECTORY;
+    s := 'Accept';
+    StrLCopy(FindData.cFileName, PChar(s), High(FindData.cFileName));
   end;
 end;
 
@@ -185,10 +224,13 @@ function FsFindNext (Hdl : thandle; var FindData : tWIN32FINDDATA) : bool; stdca
 
 begin
 if Hdl=REQUES_TOKEN_HANDLER then
-  FindData.cFileName := 'hello';
- // function FsFindNext
-  MessageBox(0,'Dir','Find next',0);
+begin
+    Fillchar(FindData, sizeof(Win32_find_data), 0);
+    FindData.dwFileAttributes := FILE_ATTRIBUTE_DIRECTORY;
+    StrLCopy(FindData.cFileName, PChar('Cancel'), High(FindData.cFileName));
  result := False;
+end;
+  result := False;
 end;
 
 { ------------------------------------------------------------------ }
