@@ -12,8 +12,10 @@ uses
   sysutils,
   wininet,
   registry,
-  ShellApi,Generics.Collections,
-  AccessConfig,Data.DBXJSON,
+  ShellApi,
+  Generics.Collections,
+  AccessConfig,
+  Data.DBXJSON,
   idComponent,
   DropboxClient in '..\DropboxAPI\DropboxClient.pas',
   DropboxRest in '..\DropboxAPI\DropboxRest.pas',
@@ -157,7 +159,7 @@ end;
 
 function confirm():Boolean;
 begin
-if RequestProc(PluginNumber,RT_MsgYesNo,'Confirm Authentification','Continue with auth?',0,0)
+if RequestProc(PluginNumber,RT_MsgYesNo,'Confirm Authentification','Continue with auth?',nil,0)
 then
   begin
         result :=  True;
@@ -259,20 +261,20 @@ try
         Result := INVALID_HANDLE_VALUE;
         SetLastError(ERROR_NO_MORE_FILES);
     end;
+  except
+    on E1:ErrorResponse do
+      Log('Exception in FindFirst '+E1.ClassName+' '+E1.Message);
+    on E2: RESTSocketError do
+      Log('Exception in FindFirst '+E2.ClassName+' '+E2.Message);
+    on E3:Exception do
+      Log('Exception in FindFirst '+E3.ClassName+' '+E3.Message);
+  end;
 
-  // Clean a pointers if error occurred in FindFirst
+    // Clean a pointers if error occurred in FindFirst
   PFindNextRec.PList.Free;
   Dispose(PFindNextRec.PList);
   Dispose(PFindNextRec);
   //
-  except
-    on E1:ErrorResponse do
-    Log('Exception in FindFirst '+E1.ClassName+' '+E1.Message);
-    on E2: RESTSocketError do
-        Log('Exception in FindFirst '+E2.ClassName+' '+E2.Message);
-    on E3:Exception do
-         Log('Exception in FindFirst '+E3.ClassName+' '+E3.Message);
-  end;
 end;
 
 { ------------------------------------------------------------------ }
@@ -312,6 +314,7 @@ function FsGetFile (RemoteName, LocalName : PChar; CopyFlags : integer ;
 
 
 begin
+  Result := FS_FILE_NOTFOUND;
 end;
 { ------------------------------------------------------------------ }
 function FsInit(PluginNr:integer;pProgressProc:tProgressProc;pLogProc:tLogProc;
@@ -336,8 +339,10 @@ filemode : Word;
 handler : TDownloadEventHandler;
 remotefilename:string;
 begin
+  ShowMessage(IntToStr(CopyFlags));
    remotefilename := StringReplace(RemoteName,'\','/',[rfReplaceAll]);
     if ((CopyFlags = 0) or (CopyFlags = FS_COPYFLAGS_MOVE) ) and FileExists(LocalName) then
+    //To Do: Add resume support in this if code
       begin
         Result := FS_FILE_EXISTS;
         exit;
@@ -354,8 +359,10 @@ begin
       begin
         // close filestream and delete file
         fs.Free;
-        SysUtils.DeleteFile(LocalName);
-      end;
+        Result := FS_FILE_USERABORT	;
+      end
+      else
+          Result :=FS_FILE_OK	 ;
       
     finally
       if fs <> nil then fs.Free;
@@ -364,14 +371,26 @@ begin
     end;
     except
     on E1:ErrorResponse do
+    begin
     Log('Exception in GetFile '+E1.ClassName+' '+E1.Message);
-    on E2: RESTSocketError do
-        Log('Exception in GetFile '+E2.ClassName+' '+E2.Message);
-    on E3:Exception do
-         Log('Exception in GetFile '+E3.ClassName+' '+E3.Message);
-
+    if E1.Code = 404 then
+      // Remote file not found
+      Result := FS_FILE_NOTFOUND
+    else
+      // another dropbox errors
+      Result := FS_FILE_READERROR;
     end;
-    Result :=FS_FILE_OK	 ;
+    on E2: RESTSocketError do
+    begin
+        Log('Exception in GetFile '+E2.ClassName+' '+E2.Message);
+        Result := FS_FILE_READERROR;
+    end;
+    on E3:Exception do
+    begin
+         Log('Exception in GetFile '+E3.ClassName+' '+E3.Message);
+         Result := FS_FILE_WRITEERROR;
+    end;
+    end;
   end;
 
 exports

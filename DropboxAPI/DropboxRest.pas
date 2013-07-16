@@ -215,13 +215,11 @@ try
  json := TJsonObject.ParseJSONValue(FBody) as TJSONObject;
  if json=nil then raise Exception.Create('Non json response');
  FErrorMsg := (json.Get('error').JsonValue as TJSONString).Value;
- FUserErrorMsg := (json.Get('euser_error').JsonValue as TJSONString).Value;
+ FUserErrorMsg := (json.Get('user_error').JsonValue as TJSONString).Value;
 finally
   if json <> nil then json.Free;
   end;
   except
-    FErrorMsg := '';
-    FUserErrorMsg := '';
   end;
 
   if ( FUserErrorMsg <> '') and (FUserErrorMsg <> FErrorMsg)

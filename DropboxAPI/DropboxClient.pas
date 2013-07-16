@@ -14,6 +14,7 @@ type
   function accountInfo():TJsonObject;
   function metaData(path: string; list: boolean;file_limit: integer = 10000; hash:boolean=False;revision:string='';include_deleted:boolean=False):TJsonObject;
   procedure getFile(fromPath:string; stream: TStream; rev:string='';workbegin : TWorkEvent=nil; work : TWorkEvent=nil);
+  function createFolder(path: string):boolean;
   // abort download operation
   procedure Abort();
 end;
@@ -90,6 +91,30 @@ constructor TDropboxClient.Create(session: TDropboxSession);
 begin
   FSession := session;
   FrestClient := TRestClient.Create;
+end;
+
+function TDropboxClient.createFolder(path: string): boolean;
+var
+  url: string;
+  params : TStringList;
+  json : TJSONObject;
+begin
+Result := false;
+json:=nil;
+try
+  params := TStringList.Create;
+  params.Add('root='+FSession.Root);
+  params.Add('path='+format_path(path));
+  url :=  request('/fileops/create_folder',params);
+  json := FrestClient.GET_JSON(url);
+  Result:=true;
+finally
+    params.Free;
+    if json<>nil then json.Free;
+    
+end;
+
+
 end;
 
 constructor TDropboxClient.Destroy;
