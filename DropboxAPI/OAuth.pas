@@ -42,7 +42,9 @@ interface
 
 uses
   Classes, SysUtils, IdURI, Windows;
-
+const
+HTTP_METHOD = 'GET';
+OAUTH_VERSION = '1.0';
 type
 
   EOAuthException = class(Exception);
@@ -74,50 +76,47 @@ type
   private
     FKey: string;
     FSecret: string;
+    FCallback: string;
     procedure SetKey(const Value: string);
     procedure SetSecret(const Value: string);
+    procedure SetCallback(const Value: string);
   public
     constructor Create(Key, Secret: string);
     function AsString: string; virtual;
     procedure FromString(s: string);
     property Key: string read FKey write SetKey;
     property Secret: string read FSecret write SetSecret;
+    property Callback: string read FCallback write SetCallback;
   end;
 
   TOAuthRequest = class
   private
     FParameters: TStringList;
+    FHTTPMethod: string;
     FHTTPURL: string;
-    FScheme: string;
-    FHost: string;
-    FPath: string;
-    FFields: string;
     FVersion: string;
-    FBaseString: string;
-    FGetString: string;
-    procedure SetHTTPURL(const Value: string);
-    procedure SetBaseString(const Value: string);
-    procedure SetVersion(const Value: string);
-    function GenerateNonce(lenght: integer=8): string;
-    function GenerateTimeStamp: string;
-    function GetSignableParameters: string;
   public
-    constructor Create(HTTPURL: string);
-    function FromConsumerAndToken(Consumer: TOAuthConsumer; Token: TOAuthToken;
-                                  HTTPURL: string): TOAuthRequest;
-    procedure Sign_Request(Signature_Method: TOAuthSignatureMethod; Consumer: TOAuthConsumer;
+    constructor Create(URL: string=''; Parameters: TStringList=nil;Method: string=HTTP_METHOD);
+    destructor Desroy();
+    procedure SetParameter(parameter, value: string);
+    function GetParameter(key : string): string;
+    procedure GetNonoauthParameters(var Parameters: TStringList);
+    procedure ToHeader(var headers : TStringList; realm:string='');
+    procedure ToPost(var post: TStringList);
+    function ToPostData(): string;
+    function ToUrl(): string;
+    function GetNormalizedParameters():string;
+    function GetNormalizedHTTPMethod():string;
+    function GetNormalizedHTTPUrl():string;
+    procedure SignRequest(Signature_Method: TOAuthSignatureMethod; Consumer: TOAuthConsumer;
                           Token: TOAuthToken);
-    function Build_Signature(Signature_Method: TOAuthSignatureMethod; Consumer: TOAuthConsumer;
+    function BuildSignature(Signature_Method: TOAuthSignatureMethod; Consumer: TOAuthConsumer;
                           Token: TOAuthToken): string;
-    property BaseString: string read FBaseString write SetBaseString;
-    property Version: string read FVersion write SetVersion;
-    property Parameters: TStringList read FParameters;
-    property HTTPURL: string read FHTTPURL write SetHTTPURL;
-    property Scheme: string read FScheme;
-    property Host: string read FHost;
-    property Path: string read FPath;
-    property Fields: string read FFields;
-    property GetString: string read FGetString;
+    class function FromConsumerAndToken(Consumer: TOAuthConsumer; Token: TOAuthToken;
+                                  HTTPURL: string=''; Parameters: TStringList=nil;HTTPMethod: string=HTTP_METHOD;Callback: string='';
+                                  Verifier:string=''): TOAuthRequest;
+    class function GenerateNonce(lenght: integer=8): string;
+    class function GenerateTimestamp: string;
   end;
 
   TOAuthSignatureMethod = class
@@ -127,6 +126,7 @@ type
     function get_name(): string; virtual; abstract;
     function build_signature(Request: TOAuthRequest; Consumer: TOAuthConsumer;
                              Token: TOAuthToken): string; virtual; abstract;
+    procedure build_signature_base_string(Request: TOAuthRequest; Consumer: TOAuthConsumer; Token: TOAuthToken; out key, raw : string); virtual; abstract;
   end;
 
   TOAuthSignatureMethod_HMAC_SHA1 = class(TOAuthSignatureMethod)
@@ -134,6 +134,7 @@ type
     function get_name(): string; override;
     function build_signature(Request: TOAuthRequest; Consumer: TOAuthConsumer;
                              Token: TOAuthToken): string; override;
+    procedure build_signature_base_string(Request: TOAuthRequest; Consumer: TOAuthConsumer; Token: TOAuthToken; out key, raw : string); override;
   end;
 
   TOAuthSignatureMethod_PLAINTEXT = class(TOAuthSignatureMethod)
@@ -141,6 +142,7 @@ type
     function get_name(): string; override;
     function build_signature(Request: TOAuthRequest; Consumer: TOAuthConsumer;
                              Token: TOAuthToken): string; override;
+    procedure build_signature_base_string(Request: TOAuthRequest; Consumer: TOAuthConsumer; Token: TOAuthToken; out key, raw : string); override;
   end;
 
   TOAuthUtil = class
@@ -208,23 +210,59 @@ begin
     Result := htoin(Value, 2);
 end;
 
-function UrlEncode(const S : String) : String;
+
+function UrlEncode(s: string; safe: string='/'): string;
+function _IntToHex(Value: Integer; Digits: Integer): String;
+begin
+    Result := SysUtils.IntToHex(Value, Digits);
+end;
 var
-    I : Integer;
+    I, J, K : Integer;
     Ch : Char;
+    raw : TArray<System.Byte>;
+    added_flag : boolean;
+
 begin
     Result := '';
-    for I := 1 to Length(S) do begin
+    for I := 1 to Length(S) do
+    begin
+        added_flag := False;
         Ch := S[I];
-        if ((Ch >= '0') and (Ch <= '9')) or
-           ((Ch >= 'a') and (Ch <= 'z')) or
-           ((Ch >= 'A') and (Ch <= 'Z')) or
-           (Ch = '.') or (Ch = '-') or (Ch = '_') or (Ch = '~')then
-            Result := Result + Ch
+
+        if  ((Ch >= '0') and (Ch <= '9')) or
+            ((Ch >= 'a') and (Ch <= 'z')) or
+            ((Ch >= 'A') and (Ch <= 'Z')) or
+            (Ch = '.') or (Ch = '-') or (Ch = '_') then
+        begin
+            Result := Result + Ch;
+            added_flag := True;
+        end
         else
-            Result := Result + '%' + _IntToHex(Ord(Ch), 2);
+            for J := 1 to Length(safe) do
+                if Ch = safe[J] then
+                begin
+                  Result := Result + Ch;
+                  added_flag := True;
+                  break;
+                end;
+
+        if not added_flag then
+        begin
+            raw := TEncoding.UTF8.GetBytes(ch);
+            for K := 0 to Length(raw)-1 do
+            begin
+                Result := Result + '%' + _IntToHex(raw[K] , 2);
+            end;
+        end;
     end;
 end;
+
+
+function Escape(s:string):string;
+begin
+  Result := UrlEncode(s, '~');
+end;
+
 
 function UrlDecode(const Url : String) : String;
 var
@@ -300,6 +338,7 @@ constructor TOAuthToken.Create(Key, Secret: string);
 begin
   FKey := Key;
   FSecret := Secret;
+  FCallback := '';
 end;
 
 procedure TOAuthToken.FromString(s: string);
@@ -314,6 +353,11 @@ begin
   FreeAndNil(sl);
 end;
 
+procedure TOAuthToken.SetCallback(const Value: string);
+begin
+  FCallback := Value;
+end;
+
 procedure TOAuthToken.SetKey(const Value: string);
 begin
   FKey := Value;
@@ -325,48 +369,58 @@ begin
 end;
 
 { TOAuthRequest }
-function TOAuthRequest.Build_Signature(Signature_Method: TOAuthSignatureMethod;
+function TOAuthRequest.BuildSignature(Signature_Method: TOAuthSignatureMethod;
   Consumer: TOAuthConsumer; Token: TOAuthToken): string;
 begin
   Result := Signature_Method.build_signature(Self, Consumer, Token);
 end;
 
-constructor TOAuthRequest.Create(HTTPURL: string);
-var
-  x,y: integer;
+
+constructor TOAuthRequest.Create(URL: string; Parameters: TStringList;Method:string);
 begin
-  FHTTPURL := HTTPURL;
-  FScheme := Copy(FHTTPURL, 0, 7);
-  x := AnsiPos('.com', FHTTPURL);
-  y := AnsiPos('?', FHTTPURL);
-  FHost := Copy(FHTTPURL, 8, x-4);
-  FPath := Copy(FHTTPURL, x + 4, Length(HTTPURL) - y - 1);
-  if y > 0 then
-    FFields := Copy(FHTTPURL, y + 1, Length(HTTPURL));
-  FVersion := '1.0';
+  FHTTPURL := URL;
+  FHTTPMethod := Method;
   FParameters := TStringList.Create;
+  if Parameters<>nil then FParameters.Assign(Parameters);
+  FVersion := OAUTH_VERSION;
 end;
 
-function TOAuthRequest.FromConsumerAndToken(Consumer: TOAuthConsumer;
-  Token: TOAuthToken; HTTPURL: string): TOAuthRequest;
+destructor TOAuthRequest.Desroy;
 begin
-  Self.FParameters.Clear;
-  Self.FParameters.Add('oauth_consumer_key=' + Consumer.Key);
-  Self.FParameters.Add('oauth_nonce=' + Self.GenerateNonce);
-  Self.FParameters.Add('oauth_timestamp=' + Self.GenerateTimeStamp);
+  FParameters.Free;
+end;
+
+class function TOAuthRequest.FromConsumerAndToken(Consumer: TOAuthConsumer;
+  Token: TOAuthToken; HTTPURL: string; Parameters: TStringList; HTTPMethod,
+  Callback, Verifier: string): TOAuthRequest;
+var
+  mParameters : TStringList;
+  defaults : TStringList;
+begin
+  mparameters := TStringList.Create;
+  defaults := TStringList.Create;
+  if Parameters <> nil then mParameters.Assign(Parameters);
+  defaults.Values['oauth_consumer_key'] := Consumer.Key;
+  defaults.Values['oauth_timestamp'] := GenerateTimestamp();
+  defaults.Values['oauth_nonce'] := GenerateNonce();
+  defaults.Values['oauth_version'] := OAUTH_VERSION;
+  defaults.AddStrings(mParameters);
+  mParameters.Assign(defaults);
   if Token <> nil then
-    FParameters.Add('oauth_token=' + Token.Key);
-  Self.FParameters.Add('oauth_version=' + Self.Version);
-  Result := Self;
+  begin
+    mParameters.Values['oauth_token'] := Token.Key;
+    if Token.Callback<>'' then mParameters.Values['oauth_callback'] := Token.Callback;
+    if verifier <> '' then mParameters.Values['oauth_verifier'] := verifier;
+  end
+  else
+    if Callback <> '' then mParameters.Values['oauth_callback'] := Callback;
+
+  Result := TOAuthRequest.Create(HTTPURL, mParameters,HTTPMethod);
+  defaults.Free;
+  mparameters.Free;
 end;
 
-function TOAuthRequest.GenerateNonce(lenght: integer): string;
-{var
-  md5: TIdHashMessageDigest;
-begin
-  md5 := TIdHashMessageDigest5.Create;
-  Result := md5.HashStringAsHex(GenerateTimeStamp);
-  md5.Free;}
+class function TOAuthRequest.GenerateNonce(lenght: integer): string;
 var
 i:integer;
  begin
@@ -375,79 +429,141 @@ for I := 0 to lenght - 1 do
   Result:= Result + IntToStr(Random(10));
 end;
 
-function TOAuthRequest.GenerateTimeStamp: string;
+class function TOAuthRequest.GenerateTimeStamp: string;
 begin
   Result := IntToStr(DateTimeToUnix(Now));
 end;
 
-function TOAuthRequest.GetSignableParameters: string;
+procedure TOAuthRequest.GetNonOauthParameters(var Parameters: TStringList);
 var
-  x: integer;
-  parm: string;
+  i: integer;
+  key : string;
 begin
-  parm := '';
-  x := FParameters.IndexOfName('oauth_signature');
-  if x <> -1 then
-    FParameters.Delete(x);
-  for x := 0 to FParameters.Count - 1 do
-  begin
-    if x = 0 then
+  parameters.clear;
+  for I := 0 to FParameters.Count-1 do
     begin
-      FParameters.ValueFromIndex[x] := TOAuthUtil.urlEncodeRFC3986(FParameters.ValueFromIndex[x]);
-      parm := FParameters.Names[x] + TOAuthUtil.urlEncodeRFC3986('=') + TIdURI.PathEncode(FParameters.ValueFromIndex[x]);
-    end
-    else
-      parm := parm + TOAuthUtil.urlEncodeRFC3986('&') +
-              FParameters.Names[x] + TOAuthUtil.urlEncodeRFC3986('=' + FParameters.ValueFromIndex[x])
-  end;
-  Result := parm;
+      key := FParameters.Names[i];
+      if Pos('oauth_',key)<1 then parameters.Values[key] := FParameters.Values[key];
+    end;
 end;
 
-procedure TOAuthRequest.SetBaseString(const Value: string);
+function TOAuthRequest.GetNormalizedHTTPMethod: string;
 begin
-  FBaseString := Value;
+   Result := UpperCase(FHTTPMethod);
 end;
 
-procedure TOAuthRequest.SetHTTPURL(const Value: string);
+function TOAuthRequest.GetNormalizedHTTPUrl: string;
 var
-  x,y: integer;
+uri : TIdURI;
+port_part, path_part : string;
 begin
-  FHTTPURL := Value;
-  FScheme := Copy(FHTTPURL, 0, 7);
-  x := AnsiPos('.com', FHTTPURL);
-  y := AnsiPos('?', FHTTPURL);
-  FHost := Copy(FHTTPURL, 8, x-4);
-  if y > 0 then
-    FPath := Copy(FHTTPURL, x + 4, y - (x + 4))
-  else
-    FPath := Copy(FHTTPURL, x + 4, Length(HTTPURL) - y - 1);
-  if y > 0 then
-    FFields := Copy(FHTTPURL, y + 1, Length(HTTPURL));
+   uri := TIdURI.Create(FHTTPURL);
+   if uri.Port<>'' then
+   begin
+    if (uri.Protocol = 'http') and (uri.Port='80') then uri.Port :='';
+    if (uri.Protocol = 'https') and (uri.Port='443') then uri.Port :='';
+   end;
+   if uri.Port <> '' then port_part := ':' + uri.Port;
+   if uri.Document = ''
+   then
+    path_part := Copy(uri.Path, 0, Length(uri.Path)-1)
+   else
+    path_part := uri.Path + uri.Document;
+   Result := Format('%s://%s%s%s', [uri.Protocol, uri.Host,port_part, path_part]);
+   uri.Free;
 end;
 
-procedure TOAuthRequest.SetVersion(const Value: string);
-begin
-  FVersion := Value;
-end;
-
-procedure TOAuthRequest.Sign_Request(Signature_Method: TOAuthSignatureMethod;
-  Consumer: TOAuthConsumer; Token: TOAuthToken);
+function TOAuthRequest.GetNormalizedParameters: string;
 var
-  signature: string;
-  x: integer;
+parameters, key_values_list : TStringList;
+x,i: integer;
+key : string;
 begin
-  FParameters.Insert(2 ,'oauth_signature_method=' + Signature_Method.get_name);
-  //FParameters.Sort;
-  signature := Self.Build_Signature(Signature_Method, Consumer, Token);
-  signature := TOAuthUtil.urlEncodeRFC3986(signature);
-  FParameters.Insert(3, 'oauth_signature=' + signature);
-  for x := 0 to FParameters.Count - 1 do
+  parameters := TStringList.Create;
+  key_values_list := TStringList.Create;
+  parameters.Assign(FParameters);
+  x := parameters.IndexOfName('oauth_signature');
+  if x <> -1 then
+    parameters.Delete(x);
+  for I := 0 to parameters.Count-1 do
   begin
-    if x = 0 then
-      FGetString := FParameters.Names[X] + '=' + FParameters.ValueFromIndex[x]
-    else
-      FGetString := FGetString + '&' + FParameters.Names[X] + '=' + FParameters.ValueFromIndex[x];
+    key := parameters.Names[I];
+    key_values_list.Values[Escape(key)] := Escape(parameters.ValueFromIndex[I])
   end;
+   // Attention here..
+  key_values_list.Sort();
+
+  key_values_list.Delimiter := '&';
+  Result := key_values_list.DelimitedText;
+  parameters.Free;
+  key_values_list.Free;
+end;
+
+function TOAuthRequest.GetParameter(key: string): string;
+begin
+   Result := FParameters.Values[key];
+end;
+
+
+
+procedure TOAuthRequest.SetParameter(parameter, value: string);
+begin
+  FParameters.Values[parameter] := value;
+end;
+
+procedure TOAuthRequest.SignRequest(Signature_Method: TOAuthSignatureMethod;
+  Consumer: TOAuthConsumer; Token: TOAuthToken);
+begin
+  //Set the signature parameter to the result of build_signature.
+  //Set the signature method.
+  setParameter('oauth_signature_method', signature_method.get_name());
+  //Set the signature.
+  setParameter('oauth_signature', BuildSignature(signature_method, consumer, token))
+end;
+
+procedure TOAuthRequest.ToHeader(var headers: TStringList; realm: string);
+var
+auth_header, key : string;
+i : integer;
+begin
+if headers = nil then exit;
+headers.Clear;
+auth_header := Format('OAuth realm="%s"', [realm]);
+for I := 0 to FParameters.Count-1 do
+  begin
+    key := FParameters.Names[i];
+    if Copy(key, 0, 6) = 'oauth_'
+      then auth_header := auth_header + Format(', %s="%s"', [key, Escape(FParameters.Values[key])]);
+  end;
+  headers.Values['Authorization'] := auth_header;
+end;
+
+procedure TOAuthRequest.ToPost(var post: TStringList);
+var i: Integer;
+begin
+  if post = nil then exit;
+  post.Clear;
+  post.Delimiter := '&';
+  for I := 0 to FParameters.Count-1 do
+  begin
+    post.Add(Format('%s=%s', [Escape(FParameters.Names[I]), Escape(FParameters.ValueFromIndex[I])]));
+  end;
+end;
+
+function TOAuthRequest.ToPostData: string;
+var
+dataStringList : TStringList;
+begin
+ dataStringList := TStringList.Create;
+ dataStringList.Delimiter := '&';
+ ToPost(dataStringList);
+ Result := dataStringList.DelimitedText;
+ dataStringList.Free;
+end;
+
+function TOAuthRequest.ToUrl: string;
+begin
+    Result := Format('%s?%s', [GetNormalizedHTTPUrl, ToPostData]);
 end;
 
 { TOAuthUtil }
@@ -498,35 +614,29 @@ function TOAuthSignatureMethod_HMAC_SHA1.build_signature(Request: TOAuthRequest;
     end;
   end;
 var
-  parm1, parm: string;
-  consec, toksec: string;
+  key, raw : string;
 begin
-  parm1 := Request.GetSignableParameters;
-  parm := TOAuthUtil.urlEncodeRFC3986(Request.Scheme) +
-          TOAuthUtil.urlEncodeRFC3986(Request.Host) +
-          TOAuthUtil.urlEncodeRFC3986(Request.Path);
-  if Request.Fields <> '' then
-  begin
-    parm := parm + '&' + TOAuthUtil.urlEncodeRFC3986(Request.Fields);
-    parm := parm +  TOAuthUtil.urlEncodeRFC3986('&') + parm1;
-  end
-  else
-    parm :=  parm + '&' + parm1;
+  build_signature_base_string(Request, Consumer,Token, key, raw);
+  Result := Base64Encode(EncryptHMACSha1(raw, key));
+end;
 
-  Request.BaseString := 'GET&' + parm;
+procedure TOAuthSignatureMethod_HMAC_SHA1.build_signature_base_string(
+  Request: TOAuthRequest; Consumer: TOAuthConsumer; Token: TOAuthToken; out key,
+  raw: string);
+var
+  sig_list : TStringList;
+begin
+  sig_list := TStringList.Create;
+  sig_list.Add(Escape(Request.GetNormalizedHTTPMethod()));
+  sig_list.Add(Escape(Request.GetNormalizedHTTPUrl()));
+  sig_list.Add(Escape(Request.GetNormalizedParameters()));
   if Token <> nil then
-  begin
-    consec := TOAuthUtil.urlEncodeRFC3986(Consumer.Secret);
-    toksec := TOAuthUtil.urlEncodeRFC3986(Token.Secret);
-    consec := consec + '&' + toksec;
-    Result := Base64Encode(EncryptHMACSha1(Request.BaseString, consec))
-  end
+    key :=Format('%s&%s', [Escape(Consumer.Secret), Escape(Token.Secret)])
   else
-  begin
-    consec := TOAuthUtil.urlEncodeRFC3986(Consumer.Secret);
-    consec := consec + '&';
-    Result := Base64Encode(EncryptHMACSha1(Request.BaseString, consec));
-  end;
+    key := Escape(Consumer.Secret)+'&';
+  sig_list.Delimiter := '&';
+  raw := sig_list.DelimitedText;
+  sig_list.Free;
 end;
 
 function TOAuthSignatureMethod_HMAC_SHA1.get_name: string;
@@ -537,11 +647,25 @@ end;
 { TOAuthSignatureMethod_PLAINTEXT }
 function TOAuthSignatureMethod_PLAINTEXT.build_signature(Request: TOAuthRequest;
   Consumer: TOAuthConsumer; Token: TOAuthToken): string;
+var
+key, raw: string;
+begin
+  build_signature_base_string(Request,Consumer,Token,key, raw);
+  Result := key;
+end;
+
+procedure TOAuthSignatureMethod_PLAINTEXT.build_signature_base_string(
+  Request: TOAuthRequest; Consumer: TOAuthConsumer; Token: TOAuthToken; out key,
+  raw: string);
+  var
+  sig : string;
 begin
   if Token <> nil then
-    Result := TOAuthUtil.urlEncodeRFC3986((Consumer.Secret + '&' + Token.Secret))
+    key :=Format('%s&%s', [Escape(Consumer.Secret), Escape(Token.Secret)])
   else
-    Result := TOAuthUtil.urlEncodeRFC3986((Consumer.Secret));
+    key := Escape(Consumer.Secret)+'&';
+  key :=  sig;
+  raw := sig;
 end;
 
 function TOAuthSignatureMethod_PLAINTEXT.get_name: string;
