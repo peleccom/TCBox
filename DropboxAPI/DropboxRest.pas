@@ -50,12 +50,16 @@ TRestClient = class
    // procedure GET(url: string; aContent: TStream; headers: TIdHeaderList); overload;
   public
   constructor Create;
-  destructor Destroy;
+  destructor Destroy;override;
   class function Request(method, url: string; post_params:TStringList;body: string; headers : TStringList): TMemoryStream;
   function GET_JSON(url: string; headers: TIdHeaderList=nil) : TJsonObject;
   procedure GET(url: string; aContent: TStream;headers: TIdHeaderList=nil; beginproc : TWorkEvent=nil;
               progressproc : TWorkEvent=nil); overload;
   function GET(url: string; headers: TIdHeaderList=nil) : string; overload;
+  function POST(url: string;rawpostParams:TStringList; headers: TIdHeaderList=nil) : string; overload;
+  procedure POST(url: string;rawpostParams:TStringList; aContent: TStream;headers: TIdHeaderList=nil; beginproc : TWorkEvent=nil;
+              progressproc : TWorkEvent=nil); overload;
+  function POST_JSON(url: string;rawpostParams:TStringList; headers: TIdHeaderList=nil) : TJsonObject;
  // function POST(url: string; params, headers: TStringList):TJsonObject;
  // function PUT(url, body: string; headers: TStringList): TJsonObject;
   // abort download
@@ -96,6 +100,7 @@ destructor TRESTClient.Destroy;
 begin
   FreeAndNil(FLHandler);
   FreeAndNil(FIdHttp);
+  inherited Destroy;
 end;
 
 procedure TRestClient.GET(url: string; aContent: TStream; headers: TIdHeaderList;
@@ -148,8 +153,6 @@ end;
 end;
 
 function TRESTClient.GET(url: string;  headers: TIdHeaderList=nil): string;
-var
-  s: string;
 begin
 try
   FIdHttp.Request.RawHeaders.Clear;
@@ -165,6 +168,80 @@ except
   on E2: EidSocketError do
   begin
     raise RESTSocketError.Create(FIdHttp.Request.Host,E2);
+  end;
+end;
+end;
+
+
+
+function TRestClient.POST(url: string; rawpostParams: TStringList;
+  headers: TIdHeaderList): string;
+begin
+try
+  FIdHttp.Request.RawHeaders.Clear;
+  if headers <> nil then
+      FIdHttp.Request.RawHeaders.AddStrings(headers);
+  FIdHttp.HTTPOptions := [];
+  Result:=   FIdHttp.Post(url,rawpostParams);
+except
+  on E1: EIdHTTPProtocolException do
+    begin
+      raise ErrorResponse.Create(FIdHttp.Response, E1.ErrorMessage);
+    end;
+  on E2: EidSocketError do
+  begin
+    raise RESTSocketError.Create(FIdHttp.Request.Host,E2);
+  end;
+end;
+end;
+
+procedure TRestClient.POST(url: string; rawpostParams: TStringList;
+  aContent: TStream; headers: TIdHeaderList; beginproc,
+  progressproc: TWorkEvent);
+begin
+//
+
+try
+  try
+
+    if Assigned(beginproc)
+      then FIdHttp.OnWorkBegin := beginproc;
+    if Assigned(progressproc)
+      then FIdHttp.OnWork := progressproc;
+    FIdHttp.Request.RawHeaders.Clear;
+    if headers <> nil then
+        FIdHttp.Request.RawHeaders.AddStrings(headers);
+    FIdHttp.HTTPOptions := [];
+    FIdHttp.Post(url,rawpostParams, aContent);
+  finally
+    FIdHttp.OnWork := nil;
+    FIdHttp.OnWorkBegin := nil;
+  end;
+except
+  on E1: EIdHTTPProtocolException do
+    begin
+      raise ErrorResponse.Create(FIdHttp.Response, E1.ErrorMessage);
+    end;
+  on E2: EidSocketError do
+  begin
+    raise RESTSocketError.Create(FIdHttp.Request.Host,E2);
+  end;
+
+end;
+end;
+
+function TRestClient.POST_JSON(url: string; rawpostParams: TStringList;
+  headers: TIdHeaderList): TJsonObject;
+var
+  s: string;
+begin
+try
+  s := POST(url,rawpostParams, headers);
+  Result :=TJSONObject.ParseJSONValue(s) as TJSONObject;
+except
+  on E3: TJSONException do
+  begin
+    raise ErrorResponse.Create(FIdHttp.Response,s);
   end;
 end;
 end;
@@ -201,7 +278,6 @@ end;
 constructor ErrorResponse.Create(response: TIdHTTPResponse;errorMessage: string);
 var
   json : TJSONObject;
-  jsonString: TJSONString;
   msg : string;
 begin
 inherited Create('');
@@ -209,7 +285,7 @@ FStatus := response.ResponseCode;
 FReason := response.ResponseText;
 FBody := errorMessage;
 FHeaders := response.RawHeaders;
-
+json := nil;
 try
 try
  json := TJsonObject.ParseJSONValue(FBody) as TJSONObject;

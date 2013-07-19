@@ -10,3 +10,5 @@ __history
 *.wfx
 AccessConfig.pas
 bin/*
+key.txt
+TCBOX.log

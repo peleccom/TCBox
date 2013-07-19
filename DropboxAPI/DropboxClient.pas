@@ -1,7 +1,7 @@
 unit DropboxClient;
 
 interface
-uses DropboxSession, SysUtils, System.Classes, DropboxRest, Data.DBXJSON, idComponent;
+uses DropboxSession, SysUtils, System.Classes, DropboxRest, Data.DBXJSON, idComponent,Oauth;
 type
   TDropboxClient = class
   private
@@ -10,11 +10,17 @@ type
   public
   constructor Create(session: TDropboxSession);
   constructor Destroy();
-  function request(target: string; params: TStringList=nil; method: string='GET';contentserver: boolean=false):string;
+  // make reuest url , postparams and headers. Return in out params. Client must free they then finish
+  function request(target: string;var requestparams: TStringList;
+           var requestheaders: TStringList; params: TStringList=nil;
+           method: string='GET';contentserver: boolean=false):string;overload;
+  function request(target: string;params: TStringList=nil;
+           method: string='GET';contentserver: boolean=false):string;overload;
   function accountInfo():TJsonObject;
   function metaData(path: string; list: boolean;file_limit: integer = 10000; hash:boolean=False;revision:string='';include_deleted:boolean=False):TJsonObject;
   procedure getFile(fromPath:string; stream: TStream; rev:string='';workbegin : TWorkEvent=nil; work : TWorkEvent=nil);
   function createFolder(path: string):boolean;
+  function fileDelete(path: string): boolean;
   // abort download operation
   procedure Abort();
 end;
@@ -64,6 +70,7 @@ end;
   var
   i, index : integer;
   begin
+    index := 0;
     for I := Length(s) downto 1 do
       if s[i] = '/' then
       begin
@@ -98,22 +105,31 @@ var
   url: string;
   params : TStringList;
   json : TJSONObject;
+  requestparams, requestheaders: TStringList;
 begin
 Result := false;
 json:=nil;
 try
+try
   params := TStringList.Create;
-  params.Add('root='+FSession.Root);
-  params.Add('path='+format_path(path));
-  url :=  request('/fileops/create_folder',params);
-  json := FrestClient.GET_JSON(url);
+  requestparams := TStringList.Create;
+  requestheaders := TStringList.Create;
+  params.Values['root'] := FSession.Root;
+  params.Values['path'] := format_path(path);
+  url := request('/fileops/create_folder',requestparams,requestheaders,params,'POST');
+  json := FrestClient.POST_JSON(url, requestparams);
+  json.Free;
   Result:=true;
 finally
     params.Free;
-    if json<>nil then json.Free;
-    
-end;
+    requestparams.Free;
+    requestheaders.Free;
 
+end;
+except
+  on E: Exception do
+  Result := False;
+end;
 
 end;
 
@@ -123,11 +139,39 @@ begin
    FreeAndNil(FrestClient);
 end;
 
+function TDropboxClient.fileDelete(path: string): boolean;
+var
+params : TStringList;
+requestparams, requestheaders: TStringList;
+url : string;
+json : TJSONObject;
+begin
+  params := TStringList.Create;
+  requestparams := TStringList.Create;
+  requestheaders := TStringList.Create;
+  params.Values['root'] := FSession.Root;
+  params.Values['path'] := format_path(path);
+  Result := false;
+  json := nil;
+  try
+     url := request('/fileops/delete',requestparams,requestheaders,params,'POST');
+     json := FrestClient.POST_JSON(url, requestparams);
+     json.Free;
+     Result := True;
+  finally
+      params.Free;
+      requestparams.Free;
+      requestheaders.Free;
+  end;
+
+
+
+end;
+
 procedure TDropboxClient.getFile(fromPath:string; stream: TStream;rev: string; workbegin : TWorkEvent; work : TWorkEvent);
 var
 path,url:string;
 params : TStringList;
-json: TJSONObject;
 begin
   path := Format('/files/%s%s',[FSession.Root, format_path(fromPath)]);
   params := TStringList.Create;
@@ -165,32 +209,28 @@ begin
   params.Free;
 end;
 
-function TDropboxClient.request(target: string; params: TStringList=nil; method: string='GET';contentserver: boolean=false):string;
+
+function TDropboxClient.request(target: string; params: TStringList;
+  method: string; contentserver: boolean): string;
 var
-  mparams: TStringList;
-  host, base, url, url_clear: string;
-  delim:char;
+requestheaders, requestparams :TStringList;
 begin
-   mparams := TStringList.Create;
-   if params<>nil then mparams.AddStrings(params);
-   mparams.Sort;
-   if contentserver then host := TDropboxSession.API_CONTENT_HOST
-                    else host := TDropboxSession.API_HOST;
-   base := FSession.buildUrl(host, target);
-   //
-   if method = 'GET' then
-   begin
-           url_clear :=  FSession.buildUrl(host, target, nil);
-           url := FSession.buildUrl(host, target, mparams);
-           if mparams.Count>0 then delim := '&'
-           else delim := '?';
-           url := url + delim + FSession.getAccessString(url);
-   end
+requestheaders := nil;
+requestparams := nil;
+Result:= request(target,requestparams,requestheaders,params,method,contentserver);
+end;
 
-   else
-      url :='Some else';
-  Result := url;
-
+function TDropboxClient.request(target: string;var requestparams, requestheaders: TStringList;
+      params: TStringList; method: string; contentserver: boolean):string;
+var
+host, base : string;
+begin
+  if contentserver then
+    host := FSession.API_CONTENT_HOST
+  else
+    host := FSession.API_HOST;
+  base := FSession.buildUrl(host, target);
+  Result := FSession.request(base,requestparams,requestheaders,params,method);
 end;
 
 end.

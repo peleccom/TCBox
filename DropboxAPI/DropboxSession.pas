@@ -12,7 +12,7 @@ uses System.Classes, SysUtils, OAuth, IdURI, DropboxRest, Data.DBXJSON;
     API_HOST = 'api.dropbox.com';
     WEB_HOST = 'www.dropbox.com';
     API_CONTENT_HOST = 'api-content.dropbox.com';
-    private
+  private
     FConsumer : TOAuthConsumer;
     FToken: TOAuthToken;
     FRequestToken: TOAuthToken;
@@ -20,10 +20,11 @@ uses System.Classes, SysUtils, OAuth, IdURI, DropboxRest, Data.DBXJSON;
     FLocale : string;
     FRestClient: TRestClient;
     FRoot:string;
-    public
+    procedure OauthSignRequest(var params: TStringList;consumer : TOAuthConsumer; token: TOAuthToken);
+  public
     property Root: string read FRoot;
     constructor Create(consumer_key, consumer_secret: string; access_type: TAccessType; locale:string='');
-    destructor Destroy();
+    destructor Destroy();override;
     function isLinked():boolean;
     procedure unlink();
     procedure setToken(access_token, access_token_secret: string);
@@ -35,6 +36,9 @@ uses System.Classes, SysUtils, OAuth, IdURI, DropboxRest, Data.DBXJSON;
     function obtainRequestToken(): TOAuthToken;
     function obtainAccessToken(request_token: TOAuthToken = nil):TOAuthToken;
     function getAccessString(URL: string; request_token: TOAuthToken=nil):string;
+    function request(url: string;var requestparams: TStringList;
+           var requestheaders: TStringList; params: TStringList=nil;
+           method: string='GET'): string;
     procedure buildAccessHeaders(method, resourse_url: string; params: TStringList; request_token: TOAuthToken;var headers_out,params_out :TStringList);
     function SaveAccessToken(filename : string) : Boolean;
     function LoadAccessToken(filename : string) : Boolean;
@@ -51,13 +55,33 @@ procedure TDropboxSession.buildAccessHeaders(method, resourse_url: string;
   params: TStringList; request_token: TOAuthToken; var headers_out,
   params_out: TStringList);
 var
-  mparams: TStringList;
+  oauth_params: TStringList;
+  token: TOAuthToken;
+  I : integer;
+  key : string;
 begin
-  mparams := TStringList.Create;
+  params_out := TStringList.Create;
+  oauth_params := TStringList.Create;
+  headers_out := TStringList.Create;
   if params<>nil then
-    mparams.AddStrings(params);
-  mparams.Add( 'oauth_consumer_key='+FConsumer.Key);
-  FreeAndNil(mparams);
+    params_out.Assign(params);
+  oauth_params.Values['oauth_consumer_key'] := FConsumer.Key;
+  oauth_params.Values['oauth_timestamp'] := TOAuthRequest.GenerateTimestamp();
+  oauth_params.Values['oauth_nonce'] := TOAuthRequest.GenerateNonce();
+  oauth_params.Values['oauth_version'] := OAUTH_VERSION;
+  if request_token<> nil then
+    token := request_token
+  else
+    token := FToken;
+  if token <> nil then
+    oauth_params.Values['oauth_token'] := token.Key;
+  OauthSignRequest(oauth_params, Fconsumer, token);
+  for I := 0 to oauth_params.Count-1 do
+  begin
+    key := oauth_params.Names[I];
+    params_out.Values[key] := oauth_params.Values[key];
+  end;
+  oauth_params.Free;
 end;
 
 function TDropboxSession.buildAuthorizeUrl(request_token: TOAuthToken;
@@ -155,7 +179,7 @@ begin
     FreeAndNil(FRequestToken);
   if FRestClient<>nil then
     FreeAndNil(FRestClient);
-
+  inherited Destroy();
 end;
 
 function TDropboxSession.getAccessString(URL: string; request_token: TOAuthToken=nil):string;
@@ -163,13 +187,11 @@ var
   ARequest : TOAuthRequest;
   token : TOAuthToken;
 begin
-  ARequest := TOAuthRequest.Create(URL);
   if request_token<>nil then token := request_token
                         else token := FToken;
-  ARequest.HTTPURL := URL;
-  ARequest.FromConsumerAndToken(FConsumer, token, URL);
-  ARequest.Sign_Request(FSignatureMethod, FConsumer, token);
-  Result := ARequest.GetString;
+  ARequest := TOAuthRequest.FromConsumerAndToken(FConsumer, token, URL);
+  ARequest.SignRequest(FSignatureMethod, FConsumer, token);
+  Result := ARequest.ToUrl;
   FreeAndNil(ARequest);
 end;
 
@@ -208,18 +230,36 @@ begin
   end;
 end;
 
+procedure TDropboxSession.OauthSignRequest(var params: TStringList;
+  consumer: TOAuthConsumer; token: TOAuthToken);
+var
+sig : string;
+begin
+  params.Values['oauth_signature_method'] := 'PLAINTEXT';
+
+  if token<> nil then
+    sig := Format('%s&%s', [consumer.Secret, token.Secret])
+  else
+    sig := Format('%s&', [consumer.Secret]);
+  params.Values['oauth_signature'] := sig;
+end;
+
 function TDropboxSession.obtainAccessToken(request_token: TOAuthToken = nil): TOAuthToken;
 var
   url,s : string;
+  ARequest: TOAuthRequest;
 begin
   if request_token = nil then request_token := FRequestToken;
   Assert(request_token <> nil, 'No request_token available on the session. Please pass one.');
   url := buildUrl(API_HOST, '/oauth/access_token');
-  url := url + '?' + getAccessString(url, request_token);
+  ARequest := TOAuthRequest.FromConsumerAndToken(FConsumer,request_token,url);
+  ARequest.SignRequest(FSignatureMethod,FConsumer,request_token);
+  url := ARequest.ToUrl;
   s := FRestClient.GET(url);
   if FToken = nil then FToken := TOAuthToken.Create('','');
   FToken.FromString(s);
   Result := FToken;
+  ARequest.Free;
 end;
 
 function TDropboxSession.obtainRequestToken(): TOAuthToken;
@@ -231,10 +271,9 @@ begin
   if FToken<>nil then
     FreeAndNil(FToken);
   url := buildUrl(API_HOST, '/oauth/request_token');
-  ARequest := TOAuthRequest.Create(url);
-  ARequest := ARequest.FromConsumerAndToken(FConsumer, nil, url);
-  ARequest.Sign_Request(FSignatureMethod, FConsumer, nil);
-  url := url + '?' + ARequest.GetString;
+  ARequest := TOAuthRequest.FromConsumerAndToken(FConsumer, nil, url);
+  ARequest.SignRequest(FSignatureMethod, FConsumer, nil);
+  url := ARequest.ToUrl;
   s := FRestClient.GET(url);
   if FRequestToken<>nil then
     FreeAndNil(FRequestToken);
@@ -242,6 +281,28 @@ begin
   FRequestToken.FromString(s);
   ARequest.Free;
   Result := FRequestToken;
+end;
+
+
+/// make request url, parameters to post and headers to request
+function TDropboxSession.request(url: string;var requestparams, requestheaders: TStringList;
+    params: TStringList;method: string): string;
+var
+  ARequest: TOAuthRequest;
+begin
+  ARequest := TOAuthRequest.FromConsumerAndToken(FConsumer, FToken,url,params,method);
+  ARequest.SignRequest(FSignatureMethod,FConsumer,FToken);
+  if (method = 'GET') or (method = 'PUT') then
+  begin
+    Result := ARequest.ToUrl;
+  end
+  else
+  begin
+    Result := ARequest.GetNormalizedHTTPUrl;
+    ARequest.ToPost(requestparams);
+  end;
+    ARequest.ToHeader(requestheaders);
+    ARequest.Free;
 end;
 
 function TDropboxSession.SaveAccessToken(filename: string): Boolean;

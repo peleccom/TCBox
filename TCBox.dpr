@@ -1,8 +1,5 @@
 library TCBox;
 
-
-
-
 uses
   Windows,
   Vcl.Dialogs,
@@ -33,7 +30,8 @@ const
   VERSION_TEXT = '1.0beta';
   PLUGIN_TITLE = 'Total Commander Dropbox plugin';
   HELLO_TITLE  = 'TCBox '+VERSION_TEXT;
-  ACCESS_KEY_FILENAME = 'c:\tmp\key.txt';
+  ACCESS_KEY_FILENAME = 'key.txt';
+  LOG_FILENAME = 'TCBOX.log';
 
 
   REQUES_TOKEN_HANDLER = 10;
@@ -60,6 +58,11 @@ var
   PluginNumber: integer;
 
 
+
+  PluginPath : string;
+  LogFullFilename: string;
+  AccessKeyFullFileName: string;
+  LocalEncoding : TEncoding;
 //
 //Dropbox
   dropboxSession : TDropboxSession;
@@ -99,7 +102,7 @@ PStr := StrAlloc(LengthLogString + 1);
     F.Seek(F.Size, 0); { go to the end, append }
   end;
   try
-    outpututf8 := Utf8Encode(LogString); // this converts UnicodeString to WideString, sadly.
+    outpututf8 := Utf8Encode(FormatDateTime('[dd-mm-yy hh:mm:ss] ', Now) + LogString); // this converts UnicodeString to WideString, sadly.
     F.WriteBuffer( PAnsiChar(outpututf8)^, Length(outpututf8) );
   finally
     F.Free;
@@ -107,12 +110,17 @@ PStr := StrAlloc(LengthLogString + 1);
 end;
 
 procedure Log(mess: String);
-const
-LOG_FILENAME = 'c:\tmp\TCBOX.log';
 begin
- AddLog(mess, LOG_FILENAME);
+ AddLog(mess, LogFullFilename);
 end;
 
+function GetPluginFileName(): string;
+var
+  buffer: array [0..MAX_PATH] of Char;
+begin
+  GetModuleFileName( HInstance, buffer, MAX_PATH);
+  Result := buffer;
+end;
 
 
 function DateTimeToFileTime(FileTime: TDateTime): TFileTime;
@@ -159,7 +167,7 @@ end;
 
 function confirm():Boolean;
 begin
-if RequestProc(PluginNumber,RT_MsgYesNo,'Confirm Authentification','Continue with auth?',nil,0)
+if RequestProc(PluginNumber,RT_MsgYesNo,'Authentification request','Confirm Authentification in your browser and press YES',nil,0)
 then
   begin
         result :=  True;
@@ -181,9 +189,7 @@ begin
     RequestProc  :=pRequestProcW;
     PluginNumber := PluginNr;
     Result := 1;
-    dropboxSession := TDropboxSession.Create(APP_KEY,APP_SECRET,TAccessType.dropbox);
-    dropboxClient := TDropboxClient.Create(dropboxSession);
-    if not DropboxSession.LoadAccessToken(ACCESS_KEY_FILENAME) then
+    if not DropboxSession.LoadAccessToken(AccessKeyFullFileName) then
     begin
       try
       try
@@ -199,7 +205,7 @@ begin
         begin
           dropboxSession.obtainAccessToken();
         end;
-        dropboxSession.SaveAccessToken(ACCESS_KEY_FILENAME);
+        dropboxSession.SaveAccessToken(AccessKeyFullFileName);
         Result := 0;
 
       finally
@@ -339,7 +345,7 @@ filemode : Word;
 handler : TDownloadEventHandler;
 remotefilename:string;
 begin
-  ShowMessage(IntToStr(CopyFlags));
+//  ShowMessage(IntToStr(CopyFlags));
    remotefilename := StringReplace(RemoteName,'\','/',[rfReplaceAll]);
     if ((CopyFlags = 0) or (CopyFlags = FS_COPYFLAGS_MOVE) ) and FileExists(LocalName) then
     //To Do: Add resume support in this if code
@@ -393,6 +399,32 @@ begin
     end;
   end;
 
+
+function FsMkDirW(RemoteDir:pwidechar):bool; stdcall;
+var
+Dir: string;
+begin
+  Dir := StringReplace(RemoteDir,'\','/',[rfReplaceAll]);
+  Result := dropboxClient.createFolder(Dir);
+end;
+
+
+function FsRemoveDirW(RemoteName:pwidechar):bool; stdcall;
+var
+Dir: string;
+begin
+    Dir := StringReplace(RemoteName,'\','/',[rfReplaceAll]);
+    Result := dropboxClient.fileDelete(Dir);
+end;
+
+function FsDeleteFileW(RemoteName:pwidechar):bool; stdcall;
+var
+Name: string;
+begin
+  Name := StringReplace(RemoteName,'\','/',[rfReplaceAll]);
+  Result := dropboxClient.fileDelete(Name);
+end;
+
 exports
 
   FsFindClose,
@@ -404,18 +436,14 @@ exports
   FsInitW,
   FsgetFile,
   FsGetFileW,
+  FsMkDirW,
+  FsRemoveDirW,
+  FsDeleteFileW,
   FsInit;
 
 { ------------------------------------------------------------------ }
-var SaveExit:tfarproc;
 
-procedure LibExit;
-begin
-  ExitProc := SaveExit;
-   MessageBox(0,PChar('exit'),'',0);
-end;
 
-{$E wfx}
 
 { TDownloadEventHandler }
 
@@ -452,8 +480,25 @@ end;
    end;
 end;
 
-begin
-  SaveExit := ExitProc;	{ Kette der Exit-Prozeduren speichern }
-  ExitProc := @LibExit;	{ Exit-Prozedur LibExit installieren }
 
+procedure MyDLLProc(Reason: Integer);
+begin
+        if Reason = DLL_PROCESS_DETACH then
+        begin
+          LocalEncoding.Free;
+          dropboxClient.Free; // automatically free seesion object
+        end;
+
+end;
+
+
+begin
+  PluginPath := ExtractFilePath(GetPluginFileName());
+  LogFullFilename := PluginPath + LOG_FILENAME;
+  AccessKeyFullFileName := PluginPath + ACCESS_KEY_FILENAME;
+  LocalEncoding := TEncoding.GetEncoding(GetACP());
+  dropboxSession := TDropboxSession.Create(APP_KEY,APP_SECRET,TAccessType.dropbox);
+  dropboxClient := TDropboxClient.Create(dropboxSession);
+  DLLProc := @MyDLLProc;
+  // free LocalEncoding
 end.
