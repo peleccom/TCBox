@@ -59,7 +59,11 @@ TRestClient = class
   function POST(url: string;rawpostParams:TStringList; headers: TIdHeaderList=nil) : string; overload;
   procedure POST(url: string;rawpostParams:TStringList; aContent: TStream;headers: TIdHeaderList=nil; beginproc : TWorkEvent=nil;
               progressproc : TWorkEvent=nil); overload;
-  function POST_JSON(url: string;rawpostParams:TStringList; headers: TIdHeaderList=nil) : TJsonObject;
+  function POST_JSON(url: string; rawpostParams:TStringList; headers: TIdHeaderList=nil) : TJsonObject;
+  function PUT(url: string; body: TStream; headers: TIdHeaderList=nil; beginproc : TWorkEvent=nil;
+              progressproc : TWorkEvent=nil):string; overload;
+  function PUT_JSON(url: string; body: TStream; headers: TIdHeaderList=nil; beginproc : TWorkEvent=nil;
+              progressproc : TWorkEvent=nil) : TJsonObject; overload;
  // function POST(url: string; params, headers: TStringList):TJsonObject;
  // function PUT(url, body: string; headers: TStringList): TJsonObject;
   // abort download
@@ -271,6 +275,56 @@ begin
   body := '';
    end;
 
+end;
+
+function TRestClient.PUT(url: string; body: TStream; headers: TIdHeaderList;
+  beginproc, progressproc: TWorkEvent):string;
+begin
+//
+
+try
+  try
+
+    if Assigned(beginproc)
+      then FIdHttp.OnWorkBegin := beginproc;
+    if Assigned(progressproc)
+      then FIdHttp.OnWork := progressproc;
+    FIdHttp.Request.RawHeaders.Clear;
+    if headers <> nil then
+        FIdHttp.Request.RawHeaders.AddStrings(headers);
+    FIdHttp.HTTPOptions := [];
+    Result := FIdHttp.Put(url, body);
+  finally
+    FIdHttp.OnWork := nil;
+    FIdHttp.OnWorkBegin := nil;
+  end;
+except
+  on E1: EIdHTTPProtocolException do
+    begin
+      raise ErrorResponse.Create(FIdHttp.Response, E1.ErrorMessage);
+    end;
+  on E2: EidSocketError do
+  begin
+    raise RESTSocketError.Create(FIdHttp.Request.Host,E2);
+  end;
+
+end;
+end;
+
+function TRestClient.PUT_JSON(url: string; body: TStream;
+  headers: TIdHeaderList; beginproc, progressproc: TWorkEvent): TJsonObject;
+var
+  s: string;
+begin
+try
+  s := PUT(url, body, headers, beginproc, progressproc);
+  Result :=TJSONObject.ParseJSONValue(s) as TJSONObject;
+except
+  on E3: TJSONException do
+  begin
+    raise ErrorResponse.Create(FIdHttp.Response,s);
+  end;
+end;
 end;
 
 { ErrorResponse }

@@ -21,6 +21,7 @@ type
   procedure getFile(fromPath:string; stream: TStream; rev:string='';workbegin : TWorkEvent=nil; work : TWorkEvent=nil);
   function createFolder(path: string):boolean;
   function fileDelete(path: string): boolean;
+  function putFile(fullPath: string;filestream: Tstream;overwrite: boolean=False; parentRev: string=''; workbegin : TWorkEvent=nil; work : TWorkEvent=nil): string;
   // abort download operation
   procedure Abort();
 end;
@@ -209,6 +210,21 @@ begin
   params.Free;
 end;
 
+
+function TDropboxClient.putFile(fullPath: string; filestream: Tstream;
+  overwrite: boolean; parentRev: string; workbegin : TWorkEvent; work : TWorkEvent): string;
+var
+  path, url: string;
+  params: TStringList;
+begin
+  path := Format('/files_put/%s%s', [Fsession.Root, format_path(fullPath)]);
+  params := TStringList.Create;
+  params.Values['overwrite'] := BoolToStr(overwrite);
+  if parentRev = '' then params.Values['parent_rev'] := parentRev;
+  url := request(path, params, 'PUT', True);
+  Result := FrestClient.PUT(url, filestream,nil, workbegin, work);
+  params.Free;
+end;
 
 function TDropboxClient.request(target: string; params: TStringList;
   method: string; contentserver: boolean): string;
