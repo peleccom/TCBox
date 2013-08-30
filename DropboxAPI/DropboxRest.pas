@@ -61,7 +61,7 @@ TRestClient = class
               progressproc : TWorkEvent=nil); overload;
   function POST_JSON(url: string; rawpostParams:TStringList; headers: TIdHeaderList=nil) : TJsonObject;
   function PUT(url: string; body: TStream; headers: TIdHeaderList=nil; beginproc : TWorkEvent=nil;
-              progressproc : TWorkEvent=nil):string; overload;
+              progressproc : TWorkEvent=nil; mimeType:String=''):string; overload;
   function PUT_JSON(url: string; body: TStream; headers: TIdHeaderList=nil; beginproc : TWorkEvent=nil;
               progressproc : TWorkEvent=nil) : TJsonObject; overload;
  // function POST(url: string; params, headers: TStringList):TJsonObject;
@@ -278,7 +278,7 @@ begin
 end;
 
 function TRestClient.PUT(url: string; body: TStream; headers: TIdHeaderList;
-  beginproc, progressproc: TWorkEvent):string;
+  beginproc, progressproc: TWorkEvent;mimeType:String):string;
 begin
 //
 
@@ -293,6 +293,8 @@ try
     if headers <> nil then
         FIdHttp.Request.RawHeaders.AddStrings(headers);
     FIdHttp.HTTPOptions := [];
+    if mimeType<>'' then
+      FIdHttp.Request.ContentType := mimeType;
     Result := FIdHttp.Put(url, body);
   finally
     FIdHttp.OnWork := nil;

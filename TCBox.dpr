@@ -32,6 +32,7 @@ const
   HELLO_TITLE  = 'TCBox '+VERSION_TEXT;
   ACCESS_KEY_FILENAME = 'key.txt';
   LOG_FILENAME = 'TCBOX.log';
+  MAX_LOG_SIZE = 20*1024;
 
 
   REQUES_TOKEN_HANDLER = 10;
@@ -83,17 +84,18 @@ begin
   LogString := LogString + #13#10;
 PStr := StrAlloc(LengthLogString + 1);
   StrPCopy(PStr, LogString);
-  isAppendMode := false;
+  isAppendMode := False;
   if FileExists(LogFileName) then
   begin
     F := TFileStream.Create(LogFileName, fmOpenWrite);
-    isAppendMode := True;
-  end
-  else
-  F := TFileStream.Create(LogFileName, fmCreate);
-
+    if F.Size < MAX_LOG_SIZE then
+      isAppendMode := True
+    else
+      F.Free;
+  end;
   if not isAppendMode then
   begin
+    F := TFileStream.Create(LogFileName, fmCreate);
     preamble := TEncoding.UTF8.GetPreamble;
     F.WriteBuffer( PAnsiChar(preamble)^, Length(preamble));
   end
@@ -421,8 +423,75 @@ function FsDeleteFileW(RemoteName:pwidechar):bool; stdcall;
 var
 Name: string;
 begin
+try
   Name := StringReplace(RemoteName,'\','/',[rfReplaceAll]);
   Result := dropboxClient.fileDelete(Name);
+except
+on E3:Exception do
+begin
+      Log('Exception in FindFirst '+E3.ClassName+' '+E3.Message);
+end;
+end;
+
+end;
+
+function FsPutFileW(LocalName,RemoteName:pwidechar;CopyFlags:integer):integer; stdcall;
+var
+  remotefilename: string;
+  fs : TFileStream;
+  handler : TDownloadEventHandler;
+begin
+  remotefilename := StringReplace(RemoteName,'\','/',[rfReplaceAll]);
+  if ((CopyFlags = 0) or (CopyFlags = FS_COPYFLAGS_MOVE) ) and False then
+  // to do add api method to check existance of file
+  // THIS CODE NEVER BE RUNNED AT NOW !!!!! need to replace False with dropbox.exist
+//To Do: Add resume support in this if code
+  begin
+    Result := FS_FILE_EXISTS;
+    exit;
+  end;
+  try
+  try
+    fs := TFileStream.Create(LocalName,fmOpenRead);
+    handler := TDownloadEventHandler.Create(LocalName, remotefilename);
+    dropboxClient.putFile(remotefilename,fs,False,'',handler.onBegin, handler.onWork);
+    if handler.isAborted then
+    begin
+      // close filestream and delete file
+      fs.Free;
+      Result := FS_FILE_USERABORT	;
+    end
+    else
+        Result :=FS_FILE_OK	 ;
+
+  finally
+    if fs <> nil then fs.Free;
+    if handler <> nil  then handler.free;
+
+  end;
+  except
+  on E1:ErrorResponse do
+  begin
+  Log('Exception in PUTFile '+E1.ClassName+' '+E1.Message);
+  // этот код переделать 404 не будет
+  if E1.Code = 404 then
+    // Remote file not found
+    Result := FS_FILE_NOTFOUND
+  else
+    // another dropbox errors
+    Result := FS_FILE_READERROR;
+  end;
+  on E2: RESTSocketError do
+  begin
+      Log('Exception in PutFile '+E2.ClassName+' '+E2.Message);
+      Result := FS_FILE_WRITEERROR;
+  end;
+  on E3:Exception do
+  begin
+       Log('Exception in PutFile '+E3.ClassName+' '+E3.Message);
+       Result := FS_FILE_READERROR;
+  end;
+  end;
 end;
 
 exports
@@ -439,6 +508,7 @@ exports
   FsMkDirW,
   FsRemoveDirW,
   FsDeleteFileW,
+  FsPutFileW,
   FsInit;
 
 { ------------------------------------------------------------------ }

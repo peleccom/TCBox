@@ -1,7 +1,7 @@
 unit DropboxClient;
 
 interface
-uses DropboxSession, SysUtils, System.Classes, DropboxRest, Data.DBXJSON, idComponent,Oauth;
+uses Windows{debug}, DropboxSession, SysUtils, System.Classes, DropboxRest, Data.DBXJSON, idComponent,Oauth, IdCustomHTTPServer;
 type
   TDropboxClient = class
   private
@@ -216,13 +216,18 @@ function TDropboxClient.putFile(fullPath: string; filestream: Tstream;
 var
   path, url: string;
   params: TStringList;
+  mimeTable: TIdThreadSafeMimeTable;
+  mimeType:String;
 begin
   path := Format('/files_put/%s%s', [Fsession.Root, format_path(fullPath)]);
   params := TStringList.Create;
   params.Values['overwrite'] := BoolToStr(overwrite);
   if parentRev = '' then params.Values['parent_rev'] := parentRev;
   url := request(path, params, 'PUT', True);
-  Result := FrestClient.PUT(url, filestream,nil, workbegin, work);
+  mimeTable := TIdThreadSafeMimeTable.Create();
+  mimeType  := mimeTable.GetFileMIMEType(fullPath);
+  mimeTable.Free;
+  Result := FrestClient.PUT(url, filestream,nil, workbegin, work,mimeType);
   params.Free;
 end;
 
