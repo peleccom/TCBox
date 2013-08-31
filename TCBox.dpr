@@ -496,6 +496,12 @@ begin
   end;
 end;
 
+procedure FsGetDefRootName(DefRootName:PAnsiChar;maxlen:integer); stdcall;
+const rootName :String= 'Dropbox';
+begin
+  StrPLCopy(DefRootName, rootName, maxlen);
+end;
+
 exports
 
   FsFindClose,
@@ -511,6 +517,7 @@ exports
   FsRemoveDirW,
   FsDeleteFileW,
   FsPutFileW,
+  FsGetDefRootName,
   FsInit;
 
 { ------------------------------------------------------------------ }
