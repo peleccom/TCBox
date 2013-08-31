@@ -191,6 +191,8 @@ begin
     RequestProc  :=pRequestProcW;
     PluginNumber := PluginNr;
     Result := 1;
+    dropboxSession := TDropboxSession.Create(APP_KEY,APP_SECRET,TAccessType.dropbox);
+    dropboxClient := TDropboxClient.Create(dropboxSession);
     if not DropboxSession.LoadAccessToken(AccessKeyFullFileName) then
     begin
       try
@@ -556,7 +558,8 @@ begin
         if Reason = DLL_PROCESS_DETACH then
         begin
           LocalEncoding.Free;
-          dropboxClient.Free; // automatically free seesion object
+          if dropboxClient <> nil then
+            dropboxClient.Free; // automatically free seesion object
         end;
 
 end;
@@ -567,8 +570,6 @@ begin
   LogFullFilename := PluginPath + LOG_FILENAME;
   AccessKeyFullFileName := PluginPath + ACCESS_KEY_FILENAME;
   LocalEncoding := TEncoding.GetEncoding(GetACP());
-  dropboxSession := TDropboxSession.Create(APP_KEY,APP_SECRET,TAccessType.dropbox);
-  dropboxClient := TDropboxClient.Create(dropboxSession);
   DLLProc := @MyDLLProc;
   // free LocalEncoding
 end.

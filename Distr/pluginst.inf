@@ -1,0 +1,6 @@
+[plugininstall]
+description=Dropbox plugin
+descriptionrus=Плагин для Dropbox
+type=wfx
+file=TCBox.wfx
+defaultdir=TCBox
