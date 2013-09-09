@@ -64,12 +64,13 @@ var
   LogFullFilename: string;
   AccessKeyFullFileName: string;
   LocalEncoding : TEncoding;
+
+//SSL libs
+  libeay32Handle, ssleay32Handle : THandle;
 //
 //Dropbox
   dropboxSession : TDropboxSession;
   dropboxClient : TDropboxClient;
-{FileGet}
-{fIleGEt}
 
 procedure AddLog(LogString: string; LogFileName: string);
 var
@@ -217,9 +218,12 @@ begin
       end;
     except
     on E1:ErrorResponse do
-      Log('Error response ' + E1.Message);
+      Log('FSInit: Error response ' + E1.Message);
     on E2: RESTSocketError do
-      Log('Rest socket Error '+ E2.Message);
+      Log('FSInit: Rest socket Error '+ E2.Message);
+
+    on E3: Exception do
+      Log('FSInit: Error ' + E3.Message);
       end;
     end;
 end;
@@ -251,7 +255,6 @@ try
   spath := StringReplace(spath,'\','/',[rfReplaceAll]);
   json := dropboxClient.metaData(spath, True);
   JsonArray:=json.Get('contents').JsonValue as TJSONArray;
-
   for I := 0 to JsonArray.Size-1 do
   begin
       LoadFindDatawFromJSON(JsonArray.Get(I) as TJSONObject, FindDatatmp);
@@ -565,6 +568,10 @@ begin
         if Reason = DLL_PROCESS_DETACH then
         begin
           LocalEncoding.Free;
+          if ssleay32Handle <> 0 then
+            FreeLibrary(ssleay32Handle);
+          if libeay32Handle <> 0 then
+            FreeLibrary(libeay32Handle);
           if dropboxClient <> nil then
             dropboxClient.Free; // automatically free seesion object
         end;
@@ -578,5 +585,10 @@ begin
   AccessKeyFullFileName := PluginPath + ACCESS_KEY_FILENAME;
   LocalEncoding := TEncoding.GetEncoding(GetACP());
   DLLProc := @MyDLLProc;
+
+// Hack to load ssl libs from custom path
+libeay32Handle := LoadLibrary(PWideChar(PluginPath+'\libeay32.dll'));
+ssleay32Handle := LoadLibrary(PwideChar(PluginPath+'\ssleay32.dll'));
+
   // free LocalEncoding
 end.
