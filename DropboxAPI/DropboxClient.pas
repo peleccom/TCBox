@@ -18,6 +18,8 @@ type
            method: string='GET';contentserver: boolean=false):string;overload;
   function accountInfo():TJsonObject;
   function metaData(path: string; list: boolean;file_limit: integer = 10000; hash:boolean=False;revision:string='';include_deleted:boolean=False):TJsonObject;
+  // Check file existance
+  function fileExists(path: string): boolean;
   procedure getFile(fromPath:string; stream: TStream; rev:string='';workbegin : TWorkEvent=nil; work : TWorkEvent=nil);
   function createFolder(path: string):boolean;
   function fileDelete(path: string): boolean;
@@ -166,6 +168,30 @@ begin
   end;
 
 
+
+end;
+
+function TDropboxClient.fileExists(path: string): boolean;
+var
+json : TJSONObject;
+jsonValue: TJSONValue;
+begin
+Result := False;
+try
+  json := metaData(path, True);
+  jsonValue := json.Get('is_dir').JsonValue;
+  if jsonValue is TJSONFalse then
+    Result := True;
+  json.Free;
+except on E: ErrorResponse do
+begin
+  if E.Code = 404 then
+    // File with name not found
+    Result := False
+  else
+    raise;
+end;
+end;
 
 end;
 
