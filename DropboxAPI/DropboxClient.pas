@@ -6,7 +6,7 @@ type
   TDropboxClient = class
   private
     FSession: TDropboxSession;
-    FrestClient : TRestClient;
+    FRestClient: TRestClient;
   public
   constructor Create(session: TDropboxSession);
   constructor Destroy();
@@ -20,6 +20,10 @@ type
   function metaData(path: string; list: boolean;file_limit: integer = 10000; hash:boolean=False;revision:string='';include_deleted:boolean=False):TJsonObject;
   // Return True if path refers to an existing path
   function exists(path: string): boolean;
+  // Return True if path is existsting file
+  function isFile(path: string): boolean;
+  // Return True if path is existsting directory
+  function isDir(path: string): boolean;
   procedure getFile(fromPath:string; stream: TStream; rev:string='';workbegin : TWorkEvent=nil; work : TWorkEvent=nil);
   function createFolder(path: string):boolean;
   function fileDelete(path: string): boolean;
@@ -199,6 +203,48 @@ begin
   url := request(path, params, 'GET', True);
   FrestClient.GET(url, stream,nil, workbegin, work);
   params.Free;
+end;
+
+function TDropboxClient.isDir(path: string): boolean;
+var
+json : TJSONObject;
+isDirJsonValue: TJSONValue;
+begin
+Result := False;
+try
+  json := nil;
+  json := metaData(path, True);
+  isDirJsonValue := json.Get('is_dir').JsonValue;
+  if (isDirJsonValue is TJSONTrue) then
+      Result := True;
+finally
+  begin
+  if json <> nil then
+    json.Free;
+  end;
+end;
+
+end;
+
+function TDropboxClient.isFile(path: string): boolean;
+var
+json : TJSONObject;
+isDirJsonValue: TJSONValue;
+begin
+Result := False;
+try
+  json := nil;
+  json := metaData(path, True);
+  isDirJsonValue := json.Get('is_dir').JsonValue;
+  if (isDirJsonValue is TJSONFalse) then
+      Result := True;
+finally
+  begin
+  if json <> nil then
+    json.Free;
+  end;
+end;
+
 end;
 
 function booltostr(value : boolean):string;
