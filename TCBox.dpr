@@ -298,13 +298,18 @@ PFindNextRecord : ^TFindNextRecord;
 
 begin
   Result := False;
-  PFindNextRecord := Pointer(Hdl);
-  if PFindNextRecord.index < pfindNextRecord.PList.Count then
-  begin
-        FindDataW := PFindNextRecord.PList.Items[pfindNextRecord.index];
-        Inc(pfindNextRecord.index);
-        Result := True;
-  end
+  try
+    PFindNextRecord := Pointer(Hdl);
+    if PFindNextRecord.index < pfindNextRecord.PList.Count then
+    begin
+          FindDataW := PFindNextRecord.PList.Items[pfindNextRecord.index];
+          Inc(pfindNextRecord.index);
+          Result := True;
+    end
+  except
+    on E:Exception do
+      Log('Exception in FindNext '+E.ClassName+' '+E.Message);
+  end;
 end;
 
 { ------------------------------------------------------------------ }
@@ -411,8 +416,16 @@ function FsMkDirW(RemoteDir:pwidechar):bool; stdcall;
 var
 Dir: string;
 begin
-  Dir := StringReplace(RemoteDir,'\','/',[rfReplaceAll]);
-  Result := dropboxClient.createFolder(Dir);
+  try
+    Dir := StringReplace(RemoteDir,'\','/',[rfReplaceAll]);
+    Result := dropboxClient.createFolder(Dir);
+  except
+    on E:Exception do
+    begin
+         Log('Exception in FsMkDirW '+E.ClassName+' '+E.Message);
+         Result := False;
+    end;
+  end;
 end;
 
 
@@ -420,24 +433,31 @@ function FsRemoveDirW(RemoteName:pwidechar):bool; stdcall;
 var
 Dir: string;
 begin
-    Dir := StringReplace(RemoteName,'\','/',[rfReplaceAll]);
-    Result := dropboxClient.fileDelete(Dir);
+  try
+      Dir := StringReplace(RemoteName,'\','/',[rfReplaceAll]);
+      Result := dropboxClient.fileDelete(Dir);
+  except on E: Exception do
+  begin
+    Log('Exception in FsRemoveDirW '+E.ClassName+' '+E.Message);
+    Result := False;
+  end;
+  end;
+
 end;
 
 function FsDeleteFileW(RemoteName:pwidechar):bool; stdcall;
 var
 Name: string;
 begin
-try
-  Name := StringReplace(RemoteName,'\','/',[rfReplaceAll]);
-  Result := dropboxClient.fileDelete(Name);
-except
-on E3:Exception do
-begin
-      Log('Exception in FindFirst '+E3.ClassName+' '+E3.Message);
-end;
-end;
-
+  try
+    Name := StringReplace(RemoteName,'\','/',[rfReplaceAll]);
+    Result := dropboxClient.fileDelete(Name);
+  except
+  on E3:Exception do
+  begin
+    Log('Exception in FsDeleteFileW '+E3.ClassName+' '+E3.Message);
+  end;
+  end;
 end;
 
 function FsPutFileW(LocalName,RemoteName:pwidechar;CopyFlags:integer):integer; stdcall;
@@ -456,36 +476,35 @@ begin
     exit;
   end;
   try
-  try
-    fs := TFileStream.Create(LocalName,fmOpenRead);
-    handler := TDownloadEventHandler.Create(LocalName, remotefilename);
-    dropboxClient.putFile(remotefilename,fs,False,'',handler.onBegin, handler.onWork);
-    if handler.isAborted then
-    begin
-      // close filestream and delete file
-      fs.Free;
-      Result := FS_FILE_USERABORT	;
-    end
-    else
-        Result :=FS_FILE_OK	 ;
+    try
+      fs := TFileStream.Create(LocalName,fmOpenRead);
+      handler := TDownloadEventHandler.Create(LocalName, remotefilename);
+      dropboxClient.putFile(remotefilename,fs,False,'',handler.onBegin, handler.onWork);
+      if handler.isAborted then
+      begin
+        // close filestream and delete file
+        fs.Free;
+        Result := FS_FILE_USERABORT	;
+      end
+      else
+          Result :=FS_FILE_OK	 ;
 
-  finally
-    if fs <> nil then fs.Free;
-    if handler <> nil  then handler.free;
-
-  end;
+    finally
+      if fs <> nil then fs.Free;
+      if handler <> nil  then handler.free;
+    end;
   except
   on E1:ErrorResponse do
   begin
-  Log('Exception in PUTFile '+E1.ClassName+' '+E1.Message);
-  // этот код переделать 404 не будет
-  if E1.Code = 404 then
-    // Remote file not found
-    Result := FS_FILE_NOTFOUND
-  else
-    // another dropbox errors
-    Result := FS_FILE_READERROR;
-  end;
+    Log('Exception in PUTFile '+E1.ClassName+' '+E1.Message);
+    // этот код переделать 404 не будет
+    if E1.Code = 404 then
+      // Remote file not found
+      Result := FS_FILE_NOTFOUND
+    else
+      // another dropbox errors
+      Result := FS_FILE_READERROR;
+    end;
   on E2: RESTSocketError do
   begin
       Log('Exception in PutFile '+E2.ClassName+' '+E2.Message);
@@ -548,18 +567,17 @@ procedure TDownloadEventHandler.onWork(ASender: TObject; AWorkMode: TWorkMode;
   percent:integer;
   isaborted: integer;
 begin
-try
+if FMax = 0
+  then
+    percent := 0
+  else
     percent := Round((AWorkCount *100) / FMax);
-except
-on EZeroDivide do
-  percent:= 0;
-end;
-   isAborted := ProgressProc(PluginNumber,PChar(Fsource), PChar(FDestination),percent );
-   if isaborted = 1 then
-   begin
+  isAborted := ProgressProc(PluginNumber,PChar(Fsource), PChar(FDestination),percent );
+  if isaborted = 1 then
+  begin
     dropboxClient.Abort();
     self.isaborted:=true;
-   end;
+  end;
 end;
 
 

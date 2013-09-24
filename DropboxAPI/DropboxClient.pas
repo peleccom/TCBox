@@ -104,7 +104,7 @@ end;
 constructor TDropboxClient.Create(session: TDropboxSession);
 begin
   FSession := session;
-  FrestClient := TRestClient.Create;
+  FRestClient := TRestClient.Create;
 end;
 
 function TDropboxClient.createFolder(path: string): boolean;
@@ -124,7 +124,7 @@ try
   params.Values['root'] := FSession.Root;
   params.Values['path'] := format_path(path);
   url := request('/fileops/create_folder',requestparams,requestheaders,params,'POST');
-  json := FrestClient.POST_JSON(url, requestparams);
+  json := FRestClient.POST_JSON(url, requestparams);
   json.Free;
   Result:=true;
 finally
@@ -143,7 +143,7 @@ end;
 constructor TDropboxClient.Destroy;
 begin
    FreeAndNil(FSession);
-   FreeAndNil(FrestClient);
+   FreeAndNil(FRestClient);
 end;
 
 function TDropboxClient.fileDelete(path: string): boolean;
@@ -162,7 +162,7 @@ begin
   json := nil;
   try
      url := request('/fileops/delete',requestparams,requestheaders,params,'POST');
-     json := FrestClient.POST_JSON(url, requestparams);
+     json := FRestClient.POST_JSON(url, requestparams);
      json.Free;
      Result := True;
   finally
@@ -201,7 +201,7 @@ begin
   params := TStringList.Create;
   if rev<>'' then params.Add('rev='+rev);
   url := request(path, params, 'GET', True);
-  FrestClient.GET(url, stream,nil, workbegin, work);
+  FRestClient.GET(url, stream,nil, workbegin, work);
   params.Free;
 end;
 
@@ -271,7 +271,7 @@ begin
   //hash
   if revision<>'' then params.Add('rev='+revision);
   url := request(path, params, 'GET' );
-  Result := FrestClient.GET_JSON(url);
+  Result := FRestClient.GET_JSON(url);
   params.Free;
 end;
 
@@ -292,7 +292,7 @@ begin
   mimeTable := TIdThreadSafeMimeTable.Create();
   mimeType  := mimeTable.GetFileMIMEType(fullPath);
   mimeTable.Free;
-  Result := FrestClient.PUT(url, filestream,nil, workbegin, work,mimeType);
+  Result := FRestClient.PUT(url, filestream,nil, workbegin, work,mimeType);
   params.Free;
 end;
 
