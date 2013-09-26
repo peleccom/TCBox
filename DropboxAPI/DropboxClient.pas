@@ -1,7 +1,8 @@
 unit DropboxClient;
 
 interface
-uses Windows{debug}, DropboxSession, SysUtils, System.Classes, DropboxRest, Data.DBXJSON, idComponent,Oauth, IdCustomHTTPServer;
+uses Windows{debug}, DropboxSession, SysUtils, System.Classes, DropboxRest, Data.DBXJSON, idComponent,Oauth, IdCustomHTTPServer
+, RegularExpressions , iso8601Unit;
 type
   TDropboxClient = class
   private
@@ -30,6 +31,9 @@ type
   function putFile(fullPath: string;filestream: Tstream;overwrite: boolean=False; parentRev: string=''; workbegin : TWorkEvent=nil; work : TWorkEvent=nil): string;
   // abort download operation
   procedure Abort();
+
+  //
+  function parseDate(dateStr: string): TDateTime;
 end;
   function format_path(path : string):string;
   function Strip(s: String; ch: Char): String;
@@ -275,6 +279,46 @@ begin
   params.Free;
 end;
 
+
+function TDropboxClient.parseDate(dateStr: string): TDateTime;
+const
+_ShortMonthNames : array[1..12] of string = ('Jan','Feb','Mar','Apr','May','Jun',
+                                             'Jul','Aug','Sep','Oct','Nov','Dec');
+var RegEx: TRegEx;
+M: TMatch;
+i,j: integer;
+isoval: string;
+month: byte;
+begin
+   RegEx:=TRegEx.Create('\w{3},\s(\d+)\s(\w{3})\s(\d{4})\s(\d+:\d+:\d+)\s\+(\d+)');
+   if RegEx.IsMatch(dateStr)then
+   begin
+     M:=RegEx.Match(dateStr);//получаем коллекцию совпадений
+      if M.Groups.Count = 6 then
+      begin
+      // Правильная дата из 6 групп
+      begin
+          month := 1;
+          for j := 1 to 12 do
+          begin
+            if M.Groups.Item[2].Value = _ShortMonthNames[j] then
+            begin
+              month := j;
+              break;
+            end;
+          end;
+
+         isoval := M.Groups.Item[3].Value +'-'
+            +IntToStr(month) +'-'
+            + M.Groups.Item[1].Value +'T'
+            + M.Groups.Item[4].Value+'+'
+            + M.Groups.Item[5].Value;
+         Result := iso8601Unit.TIso8601.DateTimeFromIso8601(isoval);
+         exit;
+      end;
+      end;
+   end;
+end;
 
 function TDropboxClient.putFile(fullPath: string; filestream: Tstream;
   overwrite: boolean; parentRev: string; workbegin : TWorkEvent; work : TWorkEvent): string;
