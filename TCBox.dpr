@@ -17,7 +17,8 @@ uses
   DropboxClient in '..\DropboxAPI\DropboxClient.pas',
   DropboxRest in '..\DropboxAPI\DropboxRest.pas',
   DropboxSession in '..\DropboxAPI\DropboxSession.pas',
-  OAuth in '..\DropboxAPI\OAuth.pas';
+  OAuth in '..\DropboxAPI\OAuth.pas',
+  iso8601Unit in '..\DropboxAPI\iso8601Unit.pas';
 
 //httpGet in 'httpGet.pas';
 
@@ -152,7 +153,7 @@ try
     if jsonValue is TJSONTrue then FindData.dwFileAttributes := FILE_ATTRIBUTE_DIRECTORY;
     FindData.nFileSizeLow:=(jsonobject.Get('bytes').JsonValue as TJSONNumber).AsInt64;
     StrPLCopy(FindData.cFileName, filename, High(FindData.cFileName));
-    modified := StrToDateTime('15-02-2011');
+    modified := dropboxClient.parseDate(jsonobject.Get('modified').JsonValue.Value);
     FindData.ftLastWriteTime := DateTimeToFileTime(modified);
 except
   On E:Exception do

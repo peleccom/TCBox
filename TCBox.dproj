@@ -79,6 +79,7 @@
 			<DCCReference Include="..\DropboxAPI\DropboxRest.pas"/>
 			<DCCReference Include="..\DropboxAPI\DropboxSession.pas"/>
 			<DCCReference Include="..\DropboxAPI\OAuth.pas"/>
+			<DCCReference Include="..\DropboxAPI\iso8601Unit.pas"/>
 			<None Include="TCBox.todo"/>
 			<BuildConfiguration Include="Debug">
 				<Key>Cfg_2</Key>
