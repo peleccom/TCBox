@@ -164,7 +164,11 @@ end;
 
 end;
 
-
+// convert backshashes to forwardslashes
+function normalizeDropboxPath(path: string): string;
+begin
+  Result := StringReplace(path,'\','/',[rfReplaceAll]);
+end;
 
 
 
@@ -253,7 +257,7 @@ try
   New(PFindNextRec);
   New(PFindNextRec.PList);
   (PFindNextRec.PList)^ := TList<tWIN32FINDDATAW>.Create;
-  spath := StringReplace(spath,'\','/',[rfReplaceAll]);
+  spath := normalizeDropboxPath(spath);
   json := dropboxClient.metaData(spath, True);
   JsonArray:=json.Get('contents').JsonValue as TJSONArray;
   for I := 0 to JsonArray.Size-1 do
@@ -359,7 +363,7 @@ handler : TDownloadEventHandler;
 remotefilename:string;
 begin
 //  ShowMessage(IntToStr(CopyFlags));
-   remotefilename := StringReplace(RemoteName,'\','/',[rfReplaceAll]);
+   remotefilename := normalizeDropboxPath(RemoteName);
     if ((CopyFlags = 0) or (CopyFlags = FS_COPYFLAGS_MOVE) ) and FileExists(LocalName) then
     //To Do: Add resume support in this if code
       begin
@@ -418,7 +422,7 @@ var
 Dir: string;
 begin
   try
-    Dir := StringReplace(RemoteDir,'\','/',[rfReplaceAll]);
+    Dir := normalizeDropboxPath(RemoteDir);
     Result := dropboxClient.createFolder(Dir);
   except
     on E:Exception do
@@ -435,7 +439,7 @@ var
 Dir: string;
 begin
   try
-      Dir := StringReplace(RemoteName,'\','/',[rfReplaceAll]);
+      Dir := normalizeDropboxPath(RemoteName);
       Result := dropboxClient.fileDelete(Dir);
   except on E: Exception do
   begin
@@ -451,7 +455,7 @@ var
 Name: string;
 begin
   try
-    Name := StringReplace(RemoteName,'\','/',[rfReplaceAll]);
+    Name := normalizeDropboxPath(RemoteName);
     Result := dropboxClient.fileDelete(Name);
   except
   on E3:Exception do
@@ -467,7 +471,7 @@ var
   fs : TFileStream;
   handler : TDownloadEventHandler;
 begin
-  remotefilename := StringReplace(RemoteName,'\','/',[rfReplaceAll]);
+  remotefilename := normalizeDropboxPath(RemoteName);
   if ((CopyFlags = 0) or (CopyFlags = FS_COPYFLAGS_MOVE) ) and False then
   // to do add api method to check existance of file
   // THIS CODE NEVER BE RUNNED AT NOW !!!!! need to replace False with dropbox.exist
