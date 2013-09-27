@@ -165,14 +165,19 @@ begin
   Result := false;
   json := nil;
   try
-     url := request('/fileops/delete',requestparams,requestheaders,params,'POST');
-     json := FRestClient.POST_JSON(url, requestparams);
-     json.Free;
-     Result := True;
-  finally
-      params.Free;
-      requestparams.Free;
-      requestheaders.Free;
+    try
+       url := request('/fileops/delete',requestparams,requestheaders,params,'POST');
+       json := FRestClient.POST_JSON(url, requestparams);
+       json.Free;
+       Result := True;
+    finally
+        params.Free;
+        requestparams.Free;
+        requestheaders.Free;
+    end;
+  except
+    on E: Exception do
+      Result := False;
   end;
 end;
 

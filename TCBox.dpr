@@ -357,64 +357,73 @@ end;
 function FsGetFileW(RemoteName,LocalName:pwidechar;CopyFlags:integer;
   RemoteInfo:pRemoteInfo):integer; stdcall;
 var
-fs : TFileStream;
-filemode : Word;
-handler : TDownloadEventHandler;
-remotefilename:string;
+  fs : TFileStream;
+  filemode : Word;
+  handler : TDownloadEventHandler;
+  remotefilename:string;
 begin
-//  ShowMessage(IntToStr(CopyFlags));
-   remotefilename := normalizeDropboxPath(RemoteName);
-    if ((CopyFlags = 0) or (CopyFlags = FS_COPYFLAGS_MOVE) ) and FileExists(LocalName) then
-    //To Do: Add resume support in this if code
-      begin
-        Result := FS_FILE_EXISTS;
-        exit;
-      end;
-    filemode := fmCreate;
-    if (CopyFlags and FS_COPYFLAGS_OVERWRITE) <> 0 then filemode := fmCreate;
-    if (CopyFlags and FS_COPYFLAGS_RESUME) <> 0 then filemode := fmOpenWrite;
+  //  ShowMessage(IntToStr(CopyFlags));
+  remotefilename := normalizeDropboxPath(RemoteName);
+  if ((CopyFlags = 0) or (CopyFlags = FS_COPYFLAGS_MOVE) ) and FileExists(LocalName) then
+  //To Do: Add resume support in this if code
+  begin
+    Result := FS_FILE_EXISTS;
+    exit;
+  end;
+  filemode := fmCreate;
+  if (CopyFlags and FS_COPYFLAGS_OVERWRITE) <> 0 then filemode := fmCreate;
+  if (CopyFlags and FS_COPYFLAGS_RESUME) <> 0 then
+  // Resume not supported
+  begin
+    Result := FS_FILE_NOTSUPPORTED;
+    exit;
+  end;
+  try
     try
-    try
-      fs := TFileStream.Create(LocalName,filemode);
-      handler := TDownloadEventHandler.Create(remotefilename, LocalName);
-      dropboxClient.getFile(remotefilename,fs,'',handler.onBegin, handler.onWork);
-      if handler.isAborted then
-      begin
-        // close filestream and delete file
-        fs.Free;
-        Result := FS_FILE_USERABORT	;
-      end
-      else
-          Result :=FS_FILE_OK	 ;
-      
+    fs := TFileStream.Create(LocalName,filemode);
+    handler := TDownloadEventHandler.Create(remotefilename, LocalName);
+    dropboxClient.getFile(remotefilename,fs,'',handler.onBegin, handler.onWork);
+    if handler.isAborted then
+    begin
+      // close filestream and delete file
+      fs.Free;
+      Result := FS_FILE_USERABORT	;
+    end
+    else
+    begin
+      Result :=FS_FILE_OK	 ;
+      if (CopyFlags and FS_COPYFLAGS_MOVE) <> 0 then
+        //Remove file
+        dropboxClient.fileDelete(remotefilename);
+    end;
     finally
       if fs <> nil then fs.Free;
       if handler <> nil  then handler.free;
 
     end;
-    except
+  except
     on E1:ErrorResponse do
     begin
-    Log('Exception in GetFile '+E1.ClassName+' '+E1.Message);
-    if E1.Code = 404 then
-      // Remote file not found
-      Result := FS_FILE_NOTFOUND
-    else
-      // another dropbox errors
-      Result := FS_FILE_READERROR;
+      Log('Exception in GetFile '+E1.ClassName+' '+E1.Message);
+      if E1.Code = 404 then
+        // Remote file not found
+        Result := FS_FILE_NOTFOUND
+      else
+        // another dropbox errors
+        Result := FS_FILE_READERROR;
     end;
     on E2: RESTSocketError do
     begin
-        Log('Exception in GetFile '+E2.ClassName+' '+E2.Message);
-        Result := FS_FILE_READERROR;
+      Log('Exception in GetFile '+E2.ClassName+' '+E2.Message);
+      Result := FS_FILE_READERROR;
     end;
     on E3:Exception do
     begin
-         Log('Exception in GetFile '+E3.ClassName+' '+E3.Message);
-         Result := FS_FILE_WRITEERROR;
-    end;
+      Log('Exception in GetFile '+E3.ClassName+' '+E3.Message);
+      Result := FS_FILE_WRITEERROR;
     end;
   end;
+end;
 
 
 function FsMkDirW(RemoteDir:pwidechar):bool; stdcall;
