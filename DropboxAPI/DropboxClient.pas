@@ -27,7 +27,7 @@ type
   function isDir(path: string): boolean;
   procedure getFile(fromPath:string; stream: TStream; rev:string='';workbegin : TWorkEvent=nil; work : TWorkEvent=nil);
   function createFolder(path: string):boolean;
-  function fileDelete(path: string): boolean;
+  function delete(path: string): boolean;
   function putFile(fullPath: string;filestream: Tstream;overwrite: boolean=False; parentRev: string=''; workbegin : TWorkEvent=nil; work : TWorkEvent=nil): string;
   // abort download operation
   procedure Abort();
@@ -150,7 +150,7 @@ begin
    FreeAndNil(FRestClient);
 end;
 
-function TDropboxClient.fileDelete(path: string): boolean;
+function TDropboxClient.delete(path: string): boolean;
 var
 params : TStringList;
 requestparams, requestheaders: TStringList;
