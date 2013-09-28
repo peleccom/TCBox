@@ -481,27 +481,46 @@ var
   handler : TDownloadEventHandler;
 begin
   remotefilename := normalizeDropboxPath(RemoteName);
-  if ((CopyFlags = 0) or (CopyFlags = FS_COPYFLAGS_MOVE) ) and False then
-  // to do add api method to check existance of file
-  // THIS CODE NEVER BE RUNNED AT NOW !!!!! need to replace False with dropbox.exist
-//To Do: Add resume support in this if code
+  if (((CopyFlags and FS_COPYFLAGS_RESUME) = 0)
+        and ((CopyFlags and FS_COPYFLAGS_OVERWRITE) = 0 )
+        and dropboxClient.exists(remotefilename) ) then
   begin
     Result := FS_FILE_EXISTS;
     exit;
   end;
+  if (CopyFlags and FS_COPYFLAGS_RESUME) <> 0 then
+  begin
+    Result := FS_FILE_NOTSUPPORTED;
+    exit;
+  end;
+  if (CopyFlags and FS_COPYFLAGS_OVERWRITE) <> 0 then
+    // delete file
+    if not dropboxClient.fileDelete(remotefilename) then
+    begin
+      Result := FS_FILE_NOTSUPPORTED;
+      exit;
+    end;
   try
     try
-      fs := TFileStream.Create(LocalName,fmOpenRead);
+      fs := nil;
+      handler := nil;
+      fs := TFileStream.Create(LocalName, fmOpenRead);
       handler := TDownloadEventHandler.Create(LocalName, remotefilename);
-      dropboxClient.putFile(remotefilename,fs,False,'',handler.onBegin, handler.onWork);
+      dropboxClient.putFile(remotefilename, fs, False, '', handler.onBegin, handler.onWork);
       if handler.isAborted then
       begin
         // close filestream and delete file
         fs.Free;
         Result := FS_FILE_USERABORT	;
+        exit;
       end
       else
+      begin
+          FreeAndNil(fs);
           Result :=FS_FILE_OK	 ;
+          if (CopyFlags and FS_COPYFLAGS_MOVE) <> 0 then
+            DeleteFile(LocalName);
+      end;
 
     finally
       if fs <> nil then fs.Free;
@@ -511,23 +530,28 @@ begin
   on E1:ErrorResponse do
   begin
     Log('Exception in PUTFile '+E1.ClassName+' '+E1.Message);
-    // этот код переделать 404 не будет
-    if E1.Code = 404 then
-      // Remote file not found
-      Result := FS_FILE_NOTFOUND
-    else
-      // another dropbox errors
-      Result := FS_FILE_READERROR;
-    end;
+      // Dropbox errors
+    Result := FS_FILE_WRITEERROR;
+  end;
   on E2: RESTSocketError do
   begin
-      Log('Exception in PutFile '+E2.ClassName+' '+E2.Message);
-      Result := FS_FILE_WRITEERROR;
+    Log('Exception in PutFile '+E2.ClassName+' '+E2.Message);
+    Result := FS_FILE_WRITEERROR;
   end;
-  on E3:Exception do
+  on E3: EFOpenError do
   begin
-       Log('Exception in PutFile '+E3.ClassName+' '+E3.Message);
-       Result := FS_FILE_READERROR;
+    Log('Exception in PutFile '+E3.ClassName+' '+E3.Message);
+    Result := FS_FILE_NOTFOUND;
+  end;
+  on E4: EReadError do
+  begin
+    Log('Exception in PutFile '+E4.ClassName+' '+E4.Message);
+    Result := FS_FILE_READERROR;
+  end;
+  on E5: Exception do
+  begin
+    Log('Exception in PutFile '+E5.ClassName+' '+E5.Message);
+    Result := FS_FILE_READERROR;
   end;
   end;
 end;
