@@ -20,71 +20,69 @@ uses
   OAuth in '..\DropboxAPI\OAuth.pas',
   iso8601Unit in '..\DropboxAPI\iso8601Unit.pas';
 
-//httpGet in 'httpGet.pas';
+// httpGet in 'httpGet.pas';
 
 {$E wfx}
 {$R icon.res}
 {$R *.RES}
 
-
 const
   VERSION_TEXT = '1.0beta';
   PLUGIN_TITLE = 'Total Commander Dropbox plugin';
-  HELLO_TITLE  = 'TCBox '+VERSION_TEXT;
+  HELLO_TITLE = 'TCBox ' + VERSION_TEXT;
   ACCESS_KEY_FILENAME = 'key.txt';
   LOG_FILENAME = 'TCBOX.log';
-  MAX_LOG_SIZE = 20*1024;
-
+  MAX_LOG_SIZE = 20 * 1024;
 
   REQUES_TOKEN_HANDLER = 10;
 
 type
-PJsonArrayEnumerator = ^ TJSONArrayEnumerator;
+  PJsonArrayEnumerator = ^TJSONArrayEnumerator;
 
-TFindNextRecord = Record
-  PList : ^TList<tWIN32FINDDATAW>;
-  index : Integer;
-End;
+  TFindNextRecord = Record
+    PList: ^TList<tWIN32FINDDATAW>;
+    index: Integer;
+  End;
+
   TDownloadEventHandler = class
-  FMax: Int64;
-  Fsource, FDestination:string;
-  isAborted:boolean;
-  constructor Create(source, destination:string);
-    procedure onBegin (ASender: TObject; AWorkMode: TWorkMode; Max: Int64);
-    procedure onWork (ASender: TObject; AWorkMode: TWorkMode; AWorkCount: Int64);
+    FMax: Int64;
+    Fsource, FDestination: string;
+    isAborted: boolean;
+    constructor Create(source, destination: string);
+    procedure onBegin(ASender: TObject; AWorkMode: TWorkMode; Max: Int64);
+    procedure onWork(ASender: TObject; AWorkMode: TWorkMode; AWorkCount: Int64);
   end;
+
 var
-  ProgressProc : tProgressProcW;
-  LogProc      : tLogProcW;
-  RequestProc  : tRequestProcW;
-  PluginNumber: integer;
+  ProgressProc: tProgressProcW;
+  LogProc: tLogProcW;
+  RequestProc: tRequestProcW;
+  PluginNumber: Integer;
 
-
-
-  PluginPath : string;
+  PluginPath: string;
   LogFullFilename: string;
   AccessKeyFullFileName: string;
-  LocalEncoding : TEncoding;
+  LocalEncoding: TEncoding;
 
-//SSL libs
-  libeay32Handle, ssleay32Handle : THandle;
-//
-//Dropbox
-  dropboxSession : TDropboxSession;
-  dropboxClient : TDropboxClient;
+  // SSL libs
+  libeay32Handle, ssleay32Handle: THandle;
+  //
+  // Dropbox
+  DropboxSession: TDropboxSession;
+  DropboxClient: TDropboxClient;
 
 procedure AddLog(LogString: string; LogFileName: string);
 var
   F: TFileStream;
   PStr: PChar;
-  LengthLogString: integer;
+  LengthLogString: Integer;
   outpututf8: RawByteString;
   isAppendMode: boolean;
-  preamble:TBytes;
+  preamble: TBytes;
 begin
   LengthLogString := Length(LogString) + 2;
   LogString := LogString + #13#10;
-PStr := StrAlloc(LengthLogString + 1);
+  PStr := StrAlloc(LengthLogString + 1);
   StrPCopy(PStr, LogString);
   isAppendMode := False;
   if FileExists(LogFileName) then
@@ -99,15 +97,16 @@ PStr := StrAlloc(LengthLogString + 1);
   begin
     F := TFileStream.Create(LogFileName, fmCreate);
     preamble := TEncoding.UTF8.GetPreamble;
-    F.WriteBuffer( PAnsiChar(preamble)^, Length(preamble));
+    F.WriteBuffer(PAnsiChar(preamble)^, Length(preamble));
   end
   else
   begin
     F.Seek(F.Size, 0); { go to the end, append }
   end;
   try
-    outpututf8 := Utf8Encode(FormatDateTime('[dd-mm-yy hh:mm:ss] ', Now) + LogString); // this converts UnicodeString to WideString, sadly.
-    F.WriteBuffer( PAnsiChar(outpututf8)^, Length(outpututf8) );
+    outpututf8 := Utf8Encode(FormatDateTime('[dd-mm-yy hh:mm:ss] ', Now) +
+      LogString); // this converts UnicodeString to WideString, sadly.
+    F.WriteBuffer(PAnsiChar(outpututf8)^, Length(outpututf8));
   finally
     F.Free;
   end;
@@ -115,122 +114,117 @@ end;
 
 procedure Log(mess: String);
 begin
- AddLog(mess, LogFullFilename);
+  AddLog(mess, LogFullFilename);
 end;
 
 function GetPluginFileName(): string;
 var
-  buffer: array [0..MAX_PATH] of Char;
+  buffer: array [0 .. MAX_PATH] of Char;
 begin
-  GetModuleFileName( HInstance, buffer, MAX_PATH);
+  GetModuleFileName(HInstance, buffer, MAX_PATH);
   Result := buffer;
 end;
 
-
 function DateTimeToFileTime(FileTime: TDateTime): TFileTime;
 var
- LocalFileTime, Ft: TFileTime;
- SystemTime: TSystemTime;
+  LocalFileTime, Ft: TFileTime;
+  SystemTime: TSystemTime;
 begin
- Result.dwLowDateTime  := 0;
- Result.dwHighDateTime := 0;
- DateTimeToSystemTime(FileTime, SystemTime);
- SystemTimeToFileTime(SystemTime, LocalFileTime);
- LocalFileTimeToFileTime(LocalFileTime, Ft);
- Result := Ft;
+  Result.dwLowDateTime := 0;
+  Result.dwHighDateTime := 0;
+  DateTimeToSystemTime(FileTime, SystemTime);
+  SystemTimeToFileTime(SystemTime, LocalFileTime);
+  LocalFileTimeToFileTime(LocalFileTime, Ft);
+  Result := Ft;
 end;
 
-procedure LoadFindDatawFromJSON(jsonobject: TJSONObject; var FindData : tWIN32FINDDATAW);
+procedure LoadFindDatawFromJSON(jsonobject: TJSONObject;
+  var FindData: tWIN32FINDDATAW);
 var
-filename : string;
-jsonvalue : TJSONValue;
-modified : TDateTime;
+  filename: string;
+  jsonvalue: TJSONValue;
+  modified: TDateTime;
 begin
-try
+  try
     Fillchar(FindData, sizeof(FindData), 0);
-    filename := GetSimpleFileName (jsonobject.Get('path').JsonValue.Value);
-    jsonValue := jsonobject.Get('is_dir').JsonValue;
-    if jsonValue is TJSONTrue then FindData.dwFileAttributes := FILE_ATTRIBUTE_DIRECTORY;
-    FindData.nFileSizeLow:=(jsonobject.Get('bytes').JsonValue as TJSONNumber).AsInt64;
+    filename := GetSimpleFileName(jsonobject.Get('path').jsonvalue.Value);
+    jsonvalue := jsonobject.Get('is_dir').jsonvalue;
+    if jsonvalue is TJSONTrue then
+      FindData.dwFileAttributes := FILE_ATTRIBUTE_DIRECTORY;
+    FindData.nFileSizeLow :=
+      (jsonobject.Get('bytes').jsonvalue as TJSONNumber).AsInt64;
     StrPLCopy(FindData.cFileName, filename, High(FindData.cFileName));
-    modified := dropboxClient.parseDate(jsonobject.Get('modified').JsonValue.Value);
+    modified := DropboxClient.parseDate(jsonobject.Get('modified')
+      .jsonvalue.Value);
     FindData.ftLastWriteTime := DateTimeToFileTime(modified);
-except
-  On E:Exception do
-  begin
-    LogProc(pluginNumber, msgtype_details,' LoadFindDatawFromJSON ');
+  except
+    On E: Exception do
+    begin
+      LogProc(PluginNumber, msgtype_details, ' LoadFindDatawFromJSON ');
+    end;
   end;
-end;
 
 end;
 
 // convert backshashes to forwardslashes
 function normalizeDropboxPath(path: string): string;
 begin
-  Result := StringReplace(path,'\','/',[rfReplaceAll]);
+  Result := StringReplace(path, '\', '/', [rfReplaceAll]);
 end;
 
-
-
-
-function confirm():Boolean;
+function confirm(): boolean;
 begin
-if RequestProc(PluginNumber,RT_MsgYesNo,'Authentification request','Confirm Authentification in your browser and press YES',nil,0)
-then
+  if RequestProc(PluginNumber, RT_MsgYesNo, 'Authentification request',
+    'Confirm Authentification in your browser and press YES', nil, 0) then
   begin
-        result :=  True;
+    Result := True;
   end
-else
-result := False; //go out
+  else
+    Result := False; // go out
 end;
 
-
-function FsInitW(PluginNr:integer;pProgressProcW:tProgressProcW;pLogProcW:tLogProcW;
-                pRequestProcW:tRequestProcW):integer; stdcall;
+function FsInitW(PluginNr: Integer; pProgressProcW: tProgressProcW;
+  pLogProcW: tLogProcW; pRequestProcW: tRequestProcW): Integer; stdcall;
 
 var
-token : TOAuthToken;
-url : string;
+  token: TOAuthToken;
+  url: string;
 begin
-    ProgressProc := pProgressProcW;
-    LogProc      :=pLogProcW;
-    RequestProc  :=pRequestProcW;
-    PluginNumber := PluginNr;
-    Result := 1;
-    dropboxSession := TDropboxSession.Create(APP_KEY,APP_SECRET,TAccessType.dropbox);
-    dropboxClient := TDropboxClient.Create(dropboxSession);
-    if not DropboxSession.LoadAccessToken(AccessKeyFullFileName) then
-    begin
+  ProgressProc := pProgressProcW;
+  LogProc := pLogProcW;
+  RequestProc := pRequestProcW;
+  PluginNumber := PluginNr;
+  Result := 1;
+  DropboxSession := TDropboxSession.Create(APP_KEY, APP_SECRET,
+    TAccessType.dropbox);
+  DropboxClient := TDropboxClient.Create(DropboxSession);
+  if not DropboxSession.LoadAccessToken(AccessKeyFullFileName) then
+  begin
+    try
       try
-      try
-        token := dropboxSession.obtainRequestToken();
-        url := dropboxSession.buildAuthorizeUrl(token,'');
-        ShellExecute(0,
-               PChar('open'),
-               PChar(url),
-               Nil,
-               Nil,
-               SW_SHOW);
-        if Confirm() then
+        token := DropboxSession.obtainRequestToken();
+        url := DropboxSession.buildAuthorizeUrl(token, '');
+        ShellExecute(0, PChar('open'), PChar(url), Nil, Nil, SW_SHOW);
+        if confirm() then
         begin
-          dropboxSession.obtainAccessToken();
+          DropboxSession.obtainAccessToken();
         end;
-        dropboxSession.SaveAccessToken(AccessKeyFullFileName);
+        DropboxSession.SaveAccessToken(AccessKeyFullFileName);
         Result := 0;
 
       finally
 
       end;
     except
-    on E1:ErrorResponse do
-      Log('FSInit: Error response ' + E1.Message);
-    on E2: RESTSocketError do
-      Log('FSInit: Rest socket Error '+ E2.Message);
+      on E1: ErrorResponse do
+        Log('FSInit: Error response ' + E1.Message);
+      on E2: RESTSocketError do
+        Log('FSInit: Rest socket Error ' + E2.Message);
 
-    on E3: Exception do
-      Log('FSInit: Error ' + E3.Message);
-      end;
+      on E3: Exception do
+        Log('FSInit: Error ' + E3.Message);
     end;
+  end;
 end;
 
 procedure Request();
@@ -241,54 +235,55 @@ end;
 
 { ------------------------------------------------------------------ }
 
-function FsFindFirstW(path :pwidechar;var FindData:tWIN32FINDDATAW):thandle; stdcall;
+function FsFindFirstW(path: pwidechar; var FindData: tWIN32FINDDATAW)
+  : THandle; stdcall;
 var
-json : TJSONObject;
-i : integer;
-spath : String;
-JsonArray : TJSONArray;
-FindDatatmp : TWin32FindDataW;
-PFindNextRec : ^TFindNextRecord;
+  json: TJSONObject;
+  i: Integer;
+  spath: String;
+  JsonArray: TJSONArray;
+  FindDatatmp: tWIN32FINDDATAW;
+  PFindNextRec: ^TFindNextRecord;
 begin
 
-Result := INVALID_HANDLE_VALUE;
-try
-  spath :=  path;
+  Result := INVALID_HANDLE_VALUE;
   New(PFindNextRec);
   New(PFindNextRec.PList);
-  (PFindNextRec.PList)^ := TList<tWIN32FINDDATAW>.Create;
-  spath := normalizeDropboxPath(spath);
-  json := dropboxClient.metaData(spath, True);
-  JsonArray:=json.Get('contents').JsonValue as TJSONArray;
-  for I := 0 to JsonArray.Size-1 do
-  begin
-      LoadFindDatawFromJSON(JsonArray.Get(I) as TJSONObject, FindDatatmp);
+  try
+    spath := path;
+    (PFindNextRec.PList)^ := TList<tWIN32FINDDATAW>.Create;
+    spath := normalizeDropboxPath(spath);
+    json := DropboxClient.metaData(spath, True);
+    JsonArray := json.Get('contents').jsonvalue as TJSONArray;
+    for i := 0 to JsonArray.Size - 1 do
+    begin
+      LoadFindDatawFromJSON(JsonArray.Get(i) as TJSONObject, FindDatatmp);
       PFindNextRec.PList.Add(FindDatatmp);
-  end;
-  json.Free;
+    end;
+    json.Free;
 
-  if PFindNextRec.PList.Count > 0 then
+    if PFindNextRec.PList.Count > 0 then
     begin
-        FindData := PFindNextRec.PList.Items[0];
-        PFindNextRec.index := 1;
-        Result := THandle(PFindNextRec);
-        exit();
+      FindData := PFindNextRec.PList.Items[0];
+      PFindNextRec.index := 1;
+      Result := THandle(PFindNextRec);
+      exit();
     end
-  else
+    else
     begin
-        Result := INVALID_HANDLE_VALUE;
-        SetLastError(ERROR_NO_MORE_FILES);
+      Result := INVALID_HANDLE_VALUE;
+      SetLastError(ERROR_NO_MORE_FILES);
     end;
   except
-    on E1:ErrorResponse do
-      Log('Exception in FindFirst '+E1.ClassName+' '+E1.Message);
+    on E1: ErrorResponse do
+      Log('Exception in FindFirst ' + E1.ClassName + ' ' + E1.Message);
     on E2: RESTSocketError do
-      Log('Exception in FindFirst '+E2.ClassName+' '+E2.Message);
-    on E3:Exception do
-      Log('Exception in FindFirst '+E3.ClassName+' '+E3.Message);
+      Log('Exception in FindFirst ' + E2.ClassName + ' ' + E2.Message);
+    on E3: Exception do
+      Log('Exception in FindFirst ' + E3.ClassName + ' ' + E3.Message);
   end;
 
-    // Clean a pointers if error occurred in FindFirst
+  // Clean a pointers if error occurred in FindFirst
   PFindNextRec.PList.Free;
   Dispose(PFindNextRec.PList);
   Dispose(PFindNextRec);
@@ -297,34 +292,35 @@ end;
 
 { ------------------------------------------------------------------ }
 
-function FsFindNextW(Hdl:thandle;var FindDataW:tWIN32FINDDATAW):bool; stdcall;
+function FsFindNextW(Hdl: THandle; var FindDataW: tWIN32FINDDATAW)
+  : bool; stdcall;
 var
-PFindNextRecord : ^TFindNextRecord;
+  PFindNextRecord: ^TFindNextRecord;
 
 begin
   Result := False;
   try
     PFindNextRecord := Pointer(Hdl);
-    if PFindNextRecord.index < pfindNextRecord.PList.Count then
+    if PFindNextRecord.index < PFindNextRecord.PList.Count then
     begin
-          FindDataW := PFindNextRecord.PList.Items[pfindNextRecord.index];
-          Inc(pfindNextRecord.index);
-          Result := True;
+      FindDataW := PFindNextRecord.PList.Items[PFindNextRecord.index];
+      Inc(PFindNextRecord.index);
+      Result := True;
     end
   except
-    on E:Exception do
-      Log('Exception in FindNext '+E.ClassName+' '+E.Message);
+    on E: Exception do
+      Log('Exception in FindNext ' + E.ClassName + ' ' + E.Message);
   end;
 end;
 
 { ------------------------------------------------------------------ }
 
-function FsFindClose (Hdl : thandle) : integer; stdcall;
+function FsFindClose(Hdl: THandle): Integer; stdcall;
 var
-PFindNextRecord : ^TFindNextRecord;
+  PFindNextRecord: ^TFindNextRecord;
 begin
   Result := 0;
-  PfindNextRecord := Pointer(Hdl);
+  PFindNextRecord := Pointer(Hdl);
   PFindNextRecord.PList.Free;
   Dispose(PFindNextRecord.PList);
   Dispose(PFindNextRecord);
@@ -332,88 +328,104 @@ end;
 
 { ------------------------------------------------------------------ }
 
-function FsGetFile (RemoteName, LocalName : PChar; CopyFlags : integer ;
-                    RemoteInfo : pRemoteInfo) : integer; stdcall;
-
+function FsGetFile(RemoteName, LocalName: PChar; CopyFlags: Integer;
+  RemoteInfo: pRemoteInfo): Integer; stdcall;
 
 begin
   Result := FS_FILE_NOTFOUND;
 end;
+
 { ------------------------------------------------------------------ }
-function FsInit(PluginNr:integer;pProgressProc:tProgressProc;pLogProc:tLogProc;
-                pRequestProc:tRequestProc):integer; stdcall;
+function FsInit(PluginNr: Integer; pProgressProc: tProgressProc;
+  pLogProc: tLogProc; pRequestProc: tRequestProc): Integer; stdcall;
 begin
- Result := 1;
+  Result := 1;
 end;
-function FsFindNext(Hdl:thandle;var FindData:tWIN32FINDDATA):bool; stdcall;
+
+function FsFindNext(Hdl: THandle; var FindData: tWIN32FINDDATA): bool; stdcall;
 begin
-   Result := False;
+  Result := False;
 end;
-function FsFindFirst(path :pchar;var FindData:tWIN32FINDDATA):thandle; stdcall;
+
+function FsFindFirst(path: PChar; var FindData: tWIN32FINDDATA)
+  : THandle; stdcall;
 begin
   Result := INVALID_HANDLE_VALUE;
 end;
 
-function FsGetFileW(RemoteName,LocalName:pwidechar;CopyFlags:integer;
-  RemoteInfo:pRemoteInfo):integer; stdcall;
+function FsGetFileW(RemoteName, LocalName: pwidechar; CopyFlags: Integer;
+  RemoteInfo: pRemoteInfo): Integer; stdcall;
 var
-  fs : TFileStream;
-  filemode : Word;
-  handler : TDownloadEventHandler;
-  remotefilename:string;
+  fs: TFileStream;
+  filemode: Word;
+  handler: TDownloadEventHandler;
+  remotefilename: string;
 begin
-  //  ShowMessage(IntToStr(CopyFlags));
   remotefilename := normalizeDropboxPath(RemoteName);
-  if ((CopyFlags = 0) or (CopyFlags = FS_COPYFLAGS_MOVE) ) and FileExists(LocalName) then
-  //To Do: Add resume support in this if code
+  if ((CopyFlags = 0) or (CopyFlags = FS_COPYFLAGS_MOVE)) and
+    FileExists(LocalName) then
   begin
     Result := FS_FILE_EXISTS;
     exit;
   end;
   filemode := fmCreate;
-  if (CopyFlags and FS_COPYFLAGS_OVERWRITE) <> 0 then filemode := fmCreate;
   if (CopyFlags and FS_COPYFLAGS_RESUME) <> 0 then
   // Resume not supported
   begin
     Result := FS_FILE_NOTSUPPORTED;
     exit;
   end;
+  fs := nil;
+  handler := nil;
   try
     try
-    fs := TFileStream.Create(LocalName,filemode);
-    handler := TDownloadEventHandler.Create(remotefilename, LocalName);
-    dropboxClient.getFile(remotefilename,fs,'',handler.onBegin, handler.onWork);
-    if handler.isAborted then
-    begin
-      // close filestream and delete file
-      fs.Free;
-      Result := FS_FILE_USERABORT	;
-    end
-    else
-    begin
-      Result :=FS_FILE_OK	 ;
-      if (CopyFlags and FS_COPYFLAGS_MOVE) <> 0 then
-        //Remove file
-        try
-          dropboxClient.delete(remotefilename);
-        except on E: Exception do
-        begin
-          Log('Exception in GetFile(delete remote file) '+E.ClassName+' '+E.Message);
-          Result := FS_FILE_NOTSUPPORTED;
-          exit;
-        end;
-        end;
+      if FileExists(LocalName) and ((CopyFlags and FS_COPYFLAGS_OVERWRITE) = 0)
+      then
+      begin
+        Result := FS_FILE_NOTSUPPORTED;
+        exit;
+      end;
+      fs := TFileStream.Create(LocalName, filemode);
+      handler := TDownloadEventHandler.Create(remotefilename, LocalName);
+      DropboxClient.getFile(remotefilename, fs, '', handler.onBegin,
+        handler.onWork);
+      if handler.isAborted then
+      begin
+        // close filestream and delete file
+        FreeAndNil(fs);
+        DeleteFile(LocalName);
+        Result := FS_FILE_USERABORT;
+        exit;
+      end
+      else
+      begin
+        Result := FS_FILE_OK;
+        if (CopyFlags and FS_COPYFLAGS_MOVE) <> 0 then
+          // Remove file
+          try
+            DropboxClient.delete(remotefilename);
+          except
+            on E: Exception do
+            begin
+              Log('Exception in GetFile(delete remote file) ' + E.ClassName +
+                ' ' + E.Message);
+              Result := FS_FILE_NOTSUPPORTED;
+              exit;
+            end;
+          end;
 
-    end;
+      end;
     finally
-      if fs <> nil then fs.Free;
-      if handler <> nil  then handler.free;
+      if fs <> nil then
+        fs.Free;
+      if handler <> nil then
+        handler.Free;
 
     end;
   except
-    on E1:ErrorResponse do
+    on E1: ErrorResponse do
     begin
-      Log('Exception in GetFile '+E1.ClassName+' '+E1.Message);
+      Log('Exception in GetFile ' + E1.ClassName + ' ' + E1.Message);
       if E1.Code = 404 then
         // Remote file not found
         Result := FS_FILE_NOTFOUND
@@ -423,79 +435,79 @@ begin
     end;
     on E2: RESTSocketError do
     begin
-      Log('Exception in GetFile '+E2.ClassName+' '+E2.Message);
+      Log('Exception in GetFile ' + E2.ClassName + ' ' + E2.Message);
       Result := FS_FILE_READERROR;
     end;
-    on E3:Exception do
+    on E3: Exception do
     begin
-      Log('Exception in GetFile '+E3.ClassName+' '+E3.Message);
+      Log('Exception in GetFile ' + E3.ClassName + ' ' + E3.Message);
       Result := FS_FILE_WRITEERROR;
     end;
   end;
 end;
 
-
-function FsMkDirW(RemoteDir:pwidechar):bool; stdcall;
+function FsMkDirW(RemoteDir: pwidechar): bool; stdcall;
 var
-Dir: string;
+  Dir: string;
 begin
   try
     Dir := normalizeDropboxPath(RemoteDir);
-    Result := dropboxClient.createFolder(Dir);
+    Result := DropboxClient.createFolder(Dir);
   except
-    on E:Exception do
+    on E: Exception do
     begin
-         Log('Exception in FsMkDirW '+E.ClassName+' '+E.Message);
-         Result := False;
+      Log('Exception in FsMkDirW ' + E.ClassName + ' ' + E.Message);
+      Result := False;
     end;
   end;
 end;
 
-
-function FsRemoveDirW(RemoteName:pwidechar):bool; stdcall;
+function FsRemoveDirW(RemoteName: pwidechar): bool; stdcall;
 var
-Dir: string;
+  Dir: string;
 begin
   Result := False;
   try
-      Dir := normalizeDropboxPath(RemoteName);
-      dropboxClient.delete(Dir);
-      Result := True;
-  except on E: Exception do
-  begin
-    Log('Exception in FsRemoveDirW '+E.ClassName+' '+E.Message);
-  end;
+    Dir := normalizeDropboxPath(RemoteName);
+    DropboxClient.delete(Dir);
+    Result := True;
+  except
+    on E: Exception do
+    begin
+      Log('Exception in FsRemoveDirW ' + E.ClassName + ' ' + E.Message);
+    end;
   end;
 
 end;
 
-function FsDeleteFileW(RemoteName:pwidechar):bool; stdcall;
+function FsDeleteFileW(RemoteName: pwidechar): bool; stdcall;
 var
-Name: string;
+  Name: string;
 begin
   Result := False;
   try
     Name := normalizeDropboxPath(RemoteName);
-    dropboxClient.delete(Name);
+    DropboxClient.delete(Name);
     Result := True;
   except
-  on E3:Exception do
-  begin
-    Log('Exception in FsDeleteFileW '+E3.ClassName+' '+E3.Message);
-  end;
+    on E3: Exception do
+    begin
+      Log('Exception in FsDeleteFileW ' + E3.ClassName + ' ' + E3.Message);
+    end;
   end;
 end;
 
-function FsPutFileW(LocalName,RemoteName:pwidechar;CopyFlags:integer):integer; stdcall;
+function FsPutFileW(LocalName, RemoteName: pwidechar; CopyFlags: Integer)
+  : Integer; stdcall;
 var
   remotefilename: string;
-  fs : TFileStream;
-  handler : TDownloadEventHandler;
+  fs: TFileStream;
+  handler: TDownloadEventHandler;
 begin
   remotefilename := normalizeDropboxPath(RemoteName);
-  if (((CopyFlags and FS_COPYFLAGS_RESUME) = 0)
-        and ((CopyFlags and FS_COPYFLAGS_OVERWRITE) = 0 )
-        and dropboxClient.exists(remotefilename) ) then
+  if (((CopyFlags and FS_COPYFLAGS_RESUME) = 0) and
+    ((CopyFlags and FS_COPYFLAGS_OVERWRITE) = 0) and
+    DropboxClient.exists(remotefilename)) then
   begin
     Result := FS_FILE_EXISTS;
     exit;
@@ -508,74 +520,79 @@ begin
   if (CopyFlags and FS_COPYFLAGS_OVERWRITE) <> 0 then
     // delete file
     try
-      dropboxClient.delete(remotefilename)
+      DropboxClient.delete(remotefilename)
     except
-      on E : Exception do
+      on E: Exception do
       begin
-        Log('Exception in PUTFile(delete remote file) '+E.ClassName+' '+E.Message);
+        Log('Exception in PUTFile(delete remote file) ' + E.ClassName + ' ' +
+          E.Message);
         Result := FS_FILE_NOTSUPPORTED;
         exit;
       end;
     end;
+  fs := nil;
+  handler := nil;
   try
     try
-      fs := nil;
-      handler := nil;
       fs := TFileStream.Create(LocalName, fmOpenRead);
       handler := TDownloadEventHandler.Create(LocalName, remotefilename);
-      dropboxClient.putFile(remotefilename, fs, False, '', handler.onBegin, handler.onWork);
+      DropboxClient.putFile(remotefilename, fs, False, '', handler.onBegin,
+        handler.onWork);
       if handler.isAborted then
       begin
         // close filestream and delete file
         fs.Free;
-        Result := FS_FILE_USERABORT	;
+        Result := FS_FILE_USERABORT;
         exit;
       end
       else
       begin
-          FreeAndNil(fs);
-          Result :=FS_FILE_OK	 ;
-          if (CopyFlags and FS_COPYFLAGS_MOVE) <> 0 then
-            DeleteFile(LocalName);
-          exit;
+        FreeAndNil(fs);
+        Result := FS_FILE_OK;
+        if (CopyFlags and FS_COPYFLAGS_MOVE) <> 0 then
+          DeleteFile(LocalName);
+        exit;
       end;
 
     finally
-      if fs <> nil then fs.Free;
-      if handler <> nil  then handler.free;
+      if fs <> nil then
+        fs.Free;
+      if handler <> nil then
+        handler.Free;
     end;
   except
-  on E1:ErrorResponse do
-  begin
-    Log('Exception in PUTFile '+E1.ClassName+' '+E1.Message);
+    on E1: ErrorResponse do
+    begin
+      Log('Exception in PUTFile ' + E1.ClassName + ' ' + E1.Message);
       // Dropbox errors
-    Result := FS_FILE_WRITEERROR;
-  end;
-  on E2: RESTSocketError do
-  begin
-    Log('Exception in PutFile '+E2.ClassName+' '+E2.Message);
-    Result := FS_FILE_WRITEERROR;
-  end;
-  on E3: EFOpenError do
-  begin
-    Log('Exception in PutFile '+E3.ClassName+' '+E3.Message);
-    Result := FS_FILE_NOTFOUND;
-  end;
-  on E4: EReadError do
-  begin
-    Log('Exception in PutFile '+E4.ClassName+' '+E4.Message);
-    Result := FS_FILE_READERROR;
-  end;
-  on E5: Exception do
-  begin
-    Log('Exception in PutFile '+E5.ClassName+' '+E5.Message);
-    Result := FS_FILE_READERROR;
-  end;
+      Result := FS_FILE_WRITEERROR;
+    end;
+    on E2: RESTSocketError do
+    begin
+      Log('Exception in PutFile ' + E2.ClassName + ' ' + E2.Message);
+      Result := FS_FILE_WRITEERROR;
+    end;
+    on E3: EFOpenError do
+    begin
+      Log('Exception in PutFile ' + E3.ClassName + ' ' + E3.Message);
+      Result := FS_FILE_NOTFOUND;
+    end;
+    on E4: EReadError do
+    begin
+      Log('Exception in PutFile ' + E4.ClassName + ' ' + E4.Message);
+      Result := FS_FILE_READERROR;
+    end;
+    on E5: Exception do
+    begin
+      Log('Exception in PutFile ' + E5.ClassName + ' ' + E5.Message);
+      Result := FS_FILE_READERROR;
+    end;
   end;
 end;
 
-procedure FsGetDefRootName(DefRootName:PAnsiChar;maxlen:integer); stdcall;
-const rootName :String= 'Dropbox';
+procedure FsGetDefRootName(DefRootName: PAnsiChar; maxlen: Integer); stdcall;
+const
+  rootName: String = 'Dropbox';
 begin
   StrPLCopy(DefRootName, rootName, maxlen);
 end;
@@ -589,7 +606,7 @@ exports
   FsFindNext,
   FsGetFile,
   FsInitW,
-  FsgetFile,
+  FsGetFile,
   FsGetFileW,
   FsMkDirW,
   FsRemoveDirW,
@@ -600,58 +617,54 @@ exports
 
 { ------------------------------------------------------------------ }
 
-
-
 { TDownloadEventHandler }
 
-constructor TDownloadEventHandler.Create(source, destination:string);
+constructor TDownloadEventHandler.Create(source, destination: string);
 begin
-Fsource := source;
-FDestination := destination;
-isAborted:=false;
+  Fsource := source;
+  FDestination := destination;
+  isAborted := False;
 end;
 
 procedure TDownloadEventHandler.onBegin(ASender: TObject; AWorkMode: TWorkMode;
   Max: Int64);
 begin
-  FMax:= Max;
+  FMax := Max;
 end;
 
 procedure TDownloadEventHandler.onWork(ASender: TObject; AWorkMode: TWorkMode;
   AWorkCount: Int64);
-  var
-  percent:integer;
-  isaborted: integer;
+var
+  percent: Integer;
+  isAborted: Integer;
 begin
-if FMax = 0
-  then
+  if FMax = 0 then
     percent := 0
   else
-    percent := Round((AWorkCount *100) / FMax);
-  isAborted := ProgressProc(PluginNumber,PChar(Fsource), PChar(FDestination),percent );
-  if isaborted = 1 then
+    percent := Round((AWorkCount * 100) / FMax);
+  isAborted := ProgressProc(PluginNumber, PChar(Fsource),
+    PChar(FDestination), percent);
+  if isAborted = 1 then
   begin
-    dropboxClient.Abort();
-    self.isaborted:=true;
+    DropboxClient.Abort();
+    self.isAborted := True;
   end;
 end;
 
-
 procedure MyDLLProc(Reason: Integer);
 begin
-        if Reason = DLL_PROCESS_DETACH then
-        begin
-          LocalEncoding.Free;
-          if ssleay32Handle <> 0 then
-            FreeLibrary(ssleay32Handle);
-          if libeay32Handle <> 0 then
-            FreeLibrary(libeay32Handle);
-          if dropboxClient <> nil then
-            dropboxClient.Free; // automatically free seesion object
-        end;
+  if Reason = DLL_PROCESS_DETACH then
+  begin
+    LocalEncoding.Free;
+    if ssleay32Handle <> 0 then
+      FreeLibrary(ssleay32Handle);
+    if libeay32Handle <> 0 then
+      FreeLibrary(libeay32Handle);
+    if DropboxClient <> nil then
+      DropboxClient.Free; // automatically free seesion object
+  end;
 
 end;
-
 
 begin
   PluginPath := ExtractFilePath(GetPluginFileName());
@@ -660,9 +673,9 @@ begin
   LocalEncoding := TEncoding.GetEncoding(GetACP());
   DLLProc := @MyDLLProc;
 
-// Hack to load ssl libs from custom path
-libeay32Handle := LoadLibrary(PWideChar(PluginPath+'\libeay32.dll'));
-ssleay32Handle := LoadLibrary(PwideChar(PluginPath+'\ssleay32.dll'));
+  // Hack to load ssl libs from custom path
+  libeay32Handle := LoadLibrary(pwidechar(PluginPath + '\libeay32.dll'));
+  ssleay32Handle := LoadLibrary(pwidechar(PluginPath + '\ssleay32.dll'));
 
   // free LocalEncoding
 end.
