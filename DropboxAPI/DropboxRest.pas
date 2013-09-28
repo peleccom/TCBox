@@ -299,6 +299,7 @@ try
   finally
     FIdHttp.OnWork := nil;
     FIdHttp.OnWorkBegin := nil;
+    FIdHttp.Request.ContentType := '';
   end;
 except
   on E1: EIdHTTPProtocolException do
