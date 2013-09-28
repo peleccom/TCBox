@@ -1,4 +1,4 @@
-library TCBox;
+﻿library TCBox;
 
 uses
   Windows,
@@ -590,6 +590,52 @@ begin
   end;
 end;
 
+function FsRenMovFileW(OldName, NewName: pwidechar; Move, OverWrite: bool;
+  RemoteInfo: pRemoteInfo): Integer; stdcall;
+var
+  oldFileName, newFileName: string;
+  newFileExists: boolean;
+  json: TJSONObject;
+begin
+  oldFileName := normalizeDropboxPath(OldName);
+  newFileName := normalizeDropboxPath(NewName);
+  newFileExists := DropboxClient.exists(newFileName);
+  if not OverWrite and newFileExists then
+  begin
+    Result := FS_FILE_EXISTS;
+    exit;
+  end;
+  if OverWrite and newFileExists then
+    try
+      DropboxClient.delete(newFileName);
+    except
+      Result := FS_FILE_NOTSUPPORTED;
+      exit;
+    end;
+  try
+    if Move then
+    begin
+      // move object
+      json := DropboxClient.Move(oldFileName, newFileName);
+      json.Free;
+    end
+    else
+    begin
+      // copy objects
+      json := DropboxClient.copy(oldFileName, newFileName);
+      json.Free;
+    end;
+    Result := FS_FILE_OK;
+  except
+    on E: Exception do
+    begin
+      Log('Exception in FsRenMovFileW ' + E.ClassName + ' ' + E.Message);
+      Result := FS_FILE_WRITEERROR;
+      exit;
+    end;
+  end;
+end;
+
 procedure FsGetDefRootName(DefRootName: PAnsiChar; maxlen: Integer); stdcall;
 const
   rootName: String = 'Dropbox';
@@ -610,6 +656,7 @@ exports
   FsGetFileW,
   FsMkDirW,
   FsRemoveDirW,
+  FsRenMovFileW,
   FsDeleteFileW,
   FsPutFileW,
   FsGetDefRootName,

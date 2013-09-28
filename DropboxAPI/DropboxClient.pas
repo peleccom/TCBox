@@ -21,6 +21,10 @@ type
   function metaData(path: string; list: boolean;file_limit: integer = 10000; hash:boolean=False;revision:string='';include_deleted:boolean=False):TJsonObject;
   // Return True if path refers to an existing path
   function exists(path: string): boolean;
+  // Copies a file or folder to a new location
+  function copy(fromPath: string; toPath: string): TJSONObject;
+  // Moves a file or folder to a new location
+  function move(fromPath: string; toPath: string): TJSONObject;
   // Return True if path is existsting file
   function isFile(path: string): boolean;
   // Return True if path is existsting directory
@@ -104,6 +108,27 @@ var
 begin
   url := request('/account/info',nil,'GET');
   Result := FrestClient.GET_JSON(url);
+end;
+
+function TDropboxClient.copy(fromPath, toPath: string): TJSONObject;
+var
+  params, requestparams, requestheaders: TStringList;
+  url: string;
+begin
+  try
+    params := TStringList.Create;
+    requestparams := TStringList.Create;
+    requestheaders := TStringList.Create;
+    params.Values['root'] := FSession.Root;
+    params.Values['from_path'] := fromPath;
+    params.Values['to_path'] := toPath;
+    url := request('/fileops/copy',requestparams,requestheaders,params,'POST');
+    Result := FRestClient.POST_JSON(url, requestparams);
+  finally
+    params.Free;
+    requestparams.Free;
+    requestheaders.Free;
+  end;
 end;
 
 constructor TDropboxClient.Create(session: TDropboxSession);
@@ -277,6 +302,27 @@ begin
   params.Free;
 end;
 
+
+function TDropboxClient.move(fromPath, toPath: string): TJSONObject;
+var
+  params, requestparams, requestheaders: TStringList;
+  url: string;
+begin
+  try
+    params := TStringList.Create;
+    requestparams := TStringList.Create;
+    requestheaders := TStringList.Create;
+    params.Values['root'] := FSession.Root;
+    params.Values['from_path'] := fromPath;
+    params.Values['to_path'] := toPath;
+    url := request('/fileops/move',requestparams,requestheaders,params,'POST');
+    Result := FRestClient.POST_JSON(url, requestparams);
+  finally
+    params.Free;
+    requestparams.Free;
+    requestheaders.Free;
+  end;
+end;
 
 function TDropboxClient.parseDate(dateStr: string): TDateTime;
 const
