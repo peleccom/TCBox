@@ -27,7 +27,8 @@ type
   function isDir(path: string): boolean;
   procedure getFile(fromPath:string; stream: TStream; rev:string='';workbegin : TWorkEvent=nil; work : TWorkEvent=nil);
   function createFolder(path: string):boolean;
-  function delete(path: string): boolean;
+  // Delete file or folder. raise exception if fails
+  procedure delete(path: string);
   function putFile(fullPath: string;filestream: Tstream;overwrite: boolean=False; parentRev: string=''; workbegin : TWorkEvent=nil; work : TWorkEvent=nil): string;
   // abort download operation
   procedure Abort();
@@ -150,7 +151,7 @@ begin
    FreeAndNil(FRestClient);
 end;
 
-function TDropboxClient.delete(path: string): boolean;
+procedure TDropboxClient.delete(path: string);
 var
 params : TStringList;
 requestparams, requestheaders: TStringList;
@@ -162,22 +163,14 @@ begin
   requestheaders := TStringList.Create;
   params.Values['root'] := FSession.Root;
   params.Values['path'] := format_path(path);
-  Result := false;
-  json := nil;
   try
-    try
-       url := request('/fileops/delete',requestparams,requestheaders,params,'POST');
-       json := FRestClient.POST_JSON(url, requestparams);
-       json.Free;
-       Result := True;
-    finally
-        params.Free;
-        requestparams.Free;
-        requestheaders.Free;
-    end;
-  except
-    on E: Exception do
-      Result := False;
+     url := request('/fileops/delete',requestparams,requestheaders,params,'POST');
+     json := FRestClient.POST_JSON(url, requestparams);
+     json.Free;
+  finally
+      params.Free;
+      requestparams.Free;
+      requestheaders.Free;
   end;
 end;
 

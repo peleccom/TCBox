@@ -394,7 +394,16 @@ begin
       Result :=FS_FILE_OK	 ;
       if (CopyFlags and FS_COPYFLAGS_MOVE) <> 0 then
         //Remove file
-        dropboxClient.delete(remotefilename);
+        try
+          dropboxClient.delete(remotefilename);
+        except on E: Exception do
+        begin
+          Log('Exception in GetFile(delete remote file) '+E.ClassName+' '+E.Message);
+          Result := FS_FILE_NOTSUPPORTED;
+          exit;
+        end;
+        end;
+
     end;
     finally
       if fs <> nil then fs.Free;
@@ -447,13 +456,14 @@ function FsRemoveDirW(RemoteName:pwidechar):bool; stdcall;
 var
 Dir: string;
 begin
+  Result := False;
   try
       Dir := normalizeDropboxPath(RemoteName);
-      Result := dropboxClient.delete(Dir);
+      dropboxClient.delete(Dir);
+      Result := True;
   except on E: Exception do
   begin
     Log('Exception in FsRemoveDirW '+E.ClassName+' '+E.Message);
-    Result := False;
   end;
   end;
 
@@ -463,9 +473,11 @@ function FsDeleteFileW(RemoteName:pwidechar):bool; stdcall;
 var
 Name: string;
 begin
+  Result := False;
   try
     Name := normalizeDropboxPath(RemoteName);
-    Result := dropboxClient.delete(Name);
+    dropboxClient.delete(Name);
+    Result := True;
   except
   on E3:Exception do
   begin
@@ -495,10 +507,15 @@ begin
   end;
   if (CopyFlags and FS_COPYFLAGS_OVERWRITE) <> 0 then
     // delete file
-    if not dropboxClient.delete(remotefilename) then
-    begin
-      Result := FS_FILE_NOTSUPPORTED;
-      exit;
+    try
+      dropboxClient.delete(remotefilename)
+    except
+      on E : Exception do
+      begin
+        Log('Exception in PUTFile(delete remote file) '+E.ClassName+' '+E.Message);
+        Result := FS_FILE_NOTSUPPORTED;
+        exit;
+      end;
     end;
   try
     try
