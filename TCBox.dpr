@@ -520,6 +520,7 @@ begin
           Result :=FS_FILE_OK	 ;
           if (CopyFlags and FS_COPYFLAGS_MOVE) <> 0 then
             DeleteFile(LocalName);
+          exit;
       end;
 
     finally

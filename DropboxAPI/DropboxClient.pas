@@ -2,7 +2,7 @@ unit DropboxClient;
 
 interface
 uses Windows{debug}, DropboxSession, SysUtils, System.Classes, DropboxRest, Data.DBXJSON, idComponent,Oauth, IdCustomHTTPServer
-, RegularExpressions , iso8601Unit;
+, RegularExpressions , iso8601Unit, Vcl.Dialogs;
 type
   TDropboxClient = class
   private
@@ -187,8 +187,9 @@ json : TJSONObject;
 begin
 Result := False;
 try
-  json := metaData(path, True);
-  Result := True;
+  json := metaData(path, False);
+  if not((json.Get('is_deleted') <> nil) and (json.Get('is_deleted').JsonValue is TJSONTrue)) then
+    Result := True;
   json.Free;
 except on E: ErrorResponse do
 begin
@@ -222,7 +223,7 @@ begin
 Result := False;
 try
   json := nil;
-  json := metaData(path, True);
+  json := metaData(path, False);
   isDirJsonValue := json.Get('is_dir').JsonValue;
   if (isDirJsonValue is TJSONTrue) then
       Result := True;
@@ -243,7 +244,7 @@ begin
 Result := False;
 try
   json := nil;
-  json := metaData(path, True);
+  json := metaData(path, False);
   isDirJsonValue := json.Get('is_dir').JsonValue;
   if (isDirJsonValue is TJSONFalse) then
       Result := True;
@@ -259,9 +260,9 @@ end;
 function booltostr(value : boolean):string;
 begin
   if value then
-    Result := 'True'
+    Result := 'true'
   else
-    Result := 'False';
+    Result := 'false';
 end;
 
 function TDropboxClient.metaData(path: string; list: boolean;file_limit: integer = 10000;
@@ -274,9 +275,8 @@ begin
   params := TStringList.Create;
 
   params.Add('file_limit='+ IntToStr(file_limit));
-  params.Add('list='+ 'true' );
-   params.Add('include_deleted='+booltostr(include_deleted));
-  if not list then  params.Add('list=false');
+  params.Add('list='+ booltostr(list) );
+  params.Add('include_deleted='+booltostr(include_deleted));
   //hash
   if revision<>'' then params.Add('rev='+revision);
   url := request(path, params, 'GET' );
