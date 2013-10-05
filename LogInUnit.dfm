@@ -13,41 +13,118 @@ object LogInForm: TLogInForm
   Font.Style = []
   OldCreateOrder = False
   Position = poScreenCenter
-  OnClose = FormClose
+  OnCreate = FormCreate
   PixelsPerInch = 96
   TextHeight = 13
-  object AuthLabel: TLabel
-    Left = 24
-    Top = 8
-    Width = 43
-    Height = 13
-    Caption = 'Auth..ed'
-  end
-  object SignOut: TButton
-    Left = 104
-    Top = 96
-    Width = 75
-    Height = 25
-    Caption = 'SignOut'
+  object PageControl1: TPageControl
+    Left = 0
+    Top = 0
+    Width = 244
+    Height = 194
+    ActivePage = TabSheet1
+    Align = alClient
+    MultiLine = True
+    Style = tsFlatButtons
     TabOrder = 0
-    OnClick = SignOutClick
-  end
-  object SignIn: TButton
-    Left = 8
-    Top = 96
-    Width = 75
-    Height = 25
-    Caption = 'SignIn'
-    TabOrder = 1
-    OnClick = SignInClick
-  end
-  object Enter: TButton
-    Left = 8
-    Top = 64
-    Width = 75
-    Height = 26
-    Caption = 'Enter'
-    TabOrder = 2
-    OnClick = EnterClick
+    object TabSheet1: TTabSheet
+      Caption = 'TabSheet1'
+      TabVisible = False
+      OnShow = TabSheet1Show
+      ExplicitLeft = 8
+      ExplicitTop = 10
+      DesignSize = (
+        236
+        184)
+      object Enter: TButton
+        Left = 24
+        Top = 72
+        Width = 75
+        Height = 28
+        Anchors = []
+        Caption = #1055#1088#1086#1076#1086#1083#1078#1080#1090#1100
+        TabOrder = 0
+        OnClick = EnterClick
+      end
+      object SignOut: TButton
+        Left = 124
+        Top = 72
+        Width = 75
+        Height = 28
+        Anchors = []
+        Caption = #1042#1099#1093#1086#1076
+        TabOrder = 1
+        OnClick = SignOutClick
+      end
+      object SignIn: TButton
+        Left = 24
+        Top = 116
+        Width = 75
+        Height = 29
+        Anchors = []
+        Caption = #1042#1093#1086#1076
+        TabOrder = 2
+        OnClick = SignInClick
+      end
+    end
+    object TabSheet2: TTabSheet
+      Caption = 'TabSheet2'
+      ImageIndex = 1
+      TabVisible = False
+      ExplicitLeft = 8
+      ExplicitTop = 10
+      DesignSize = (
+        236
+        184)
+      object AcceptButton: TButton
+        Left = 19
+        Top = 72
+        Width = 70
+        Height = 28
+        Anchors = []
+        Caption = #1055#1088#1080#1085#1103#1090#1100
+        TabOrder = 0
+        OnClick = AcceptButtonClick
+      end
+      object CancelButton: TButton
+        Left = 134
+        Top = 72
+        Width = 75
+        Height = 28
+        Anchors = []
+        Caption = #1054#1090#1082#1083#1086#1085#1080#1090#1100
+        TabOrder = 1
+        OnClick = CancelButtonClick
+      end
+    end
+    object TabSheet3: TTabSheet
+      Caption = 'TabSheet3'
+      ImageIndex = 2
+      TabVisible = False
+      ExplicitLeft = 8
+      ExplicitTop = 10
+      object ConnectResultLabel: TLabel
+        Left = 0
+        Top = 0
+        Width = 236
+        Height = 13
+        Align = alTop
+        Alignment = taCenter
+        Caption = #1057#1086#1077#1076#1080#1085#1077#1085#1080#1077' '#1091#1089#1090#1072#1085#1086#1074#1083#1077#1085#1086
+        ExplicitWidth = 130
+      end
+      object BitBtn1: TBitBtn
+        Left = 0
+        Top = 159
+        Width = 236
+        Height = 25
+        Align = alBottom
+        Kind = bkOK
+        NumGlyphs = 2
+        TabOrder = 0
+        ExplicitLeft = 72
+        ExplicitTop = 144
+        ExplicitWidth = 75
+      end
+    end
   end
 end

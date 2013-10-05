@@ -188,12 +188,14 @@ procedure ShowDllFormModal;
 var
   modal : TModalResult;
 begin
-  LogInForm := TLogInForm.Create(nil);
+  LogInForm := TLogInForm.Create(nil, DropboxSession);
+  LogInForm.Icon.LoadFromResourceName(HInstance, '1');
   modal := LogInForm.ShowModal;
   if modal = mrOk then
     ShowMessage('Ok')
   else
     ShowMessage('Fail');
+  LogInForm.Free;
 end;
 
 function FsInitW(PluginNr: Integer; pProgressProcW: tProgressProcW;
@@ -211,10 +213,9 @@ begin
   DropboxSession := TDropboxSession.Create(APP_KEY, APP_SECRET,
     TAccessType.dropbox);
   DropboxClient := TDropboxClient.Create(DropboxSession);
-  ShowDllFormModal();
   if not DropboxSession.LoadAccessToken(AccessKeyFullFileName) then
   begin
-    try
+    {try
       try
         token := DropboxSession.obtainRequestToken();
         url := DropboxSession.buildAuthorizeUrl(token, '');
@@ -240,8 +241,9 @@ begin
 
       on E3: Exception do
         Log('FSInit: Error ' + E3.Message);
-    end;
+    end;}
   end;
+  ShowDllFormModal();
 end;
 
 procedure Request();
