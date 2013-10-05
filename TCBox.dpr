@@ -18,7 +18,8 @@ uses
   DropboxRest in '..\DropboxAPI\DropboxRest.pas',
   DropboxSession in '..\DropboxAPI\DropboxSession.pas',
   OAuth in '..\DropboxAPI\OAuth.pas',
-  iso8601Unit in '..\DropboxAPI\iso8601Unit.pas';
+  iso8601Unit in '..\DropboxAPI\iso8601Unit.pas',
+  LogInUnit in 'LogInUnit.pas' {LogInForm};
 
 // httpGet in 'httpGet.pas';
 
@@ -183,6 +184,18 @@ begin
     Result := False; // go out
 end;
 
+procedure ShowDllFormModal;
+var
+  modal : TModalResult;
+begin
+  LogInForm := TLogInForm.Create(nil);
+  modal := LogInForm.ShowModal;
+  if modal = mrOk then
+    ShowMessage('Ok')
+  else
+    ShowMessage('Fail');
+end;
+
 function FsInitW(PluginNr: Integer; pProgressProcW: tProgressProcW;
   pLogProcW: tLogProcW; pRequestProcW: tRequestProcW): Integer; stdcall;
 
@@ -198,6 +211,7 @@ begin
   DropboxSession := TDropboxSession.Create(APP_KEY, APP_SECRET,
     TAccessType.dropbox);
   DropboxClient := TDropboxClient.Create(DropboxSession);
+  ShowDllFormModal();
   if not DropboxSession.LoadAccessToken(AccessKeyFullFileName) then
   begin
     try
@@ -646,6 +660,15 @@ begin
   StrPLCopy(DefRootName, rootName, maxlen);
 end;
 
+function FsExecuteFileW(MainWin:thandle;RemoteName,Verb:pwidechar):integer; stdcall;
+begin
+  if (RemoteName = '\') and (Verb = 'properties') then
+  begin
+    ShowDllFormModal;
+  end;
+  Result := FS_EXEC_OK;
+end;
+
 exports
 
   FsFindClose,
@@ -663,6 +686,7 @@ exports
   FsDeleteFileW,
   FsPutFileW,
   FsGetDefRootName,
+  FsExecuteFileW,
   FsInit;
 
 { ------------------------------------------------------------------ }
