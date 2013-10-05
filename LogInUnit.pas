@@ -21,6 +21,8 @@ type
     SignIn: TButton;
     AcceptButton: TButton;
     CancelButton: TButton;
+    AcceptPageLabel: TLabel;
+    EnterPageLabel: TLabel;
     constructor Create(AOwner: TComponent; session: TDropboxSession);
     procedure SignOutClick(Sender: TObject);
     procedure SignInClick(Sender: TObject);

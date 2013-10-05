@@ -35,6 +35,17 @@ object LogInForm: TLogInForm
       DesignSize = (
         236
         184)
+      object EnterPageLabel: TLabel
+        Left = 0
+        Top = 0
+        Width = 236
+        Height = 13
+        Align = alTop
+        Alignment = taCenter
+        Caption = 'Total Commander Dropbox plugin'
+        WordWrap = True
+        ExplicitWidth = 159
+      end
       object Enter: TButton
         Left = 24
         Top = 38
@@ -75,6 +86,17 @@ object LogInForm: TLogInForm
       DesignSize = (
         236
         184)
+      object AcceptPageLabel: TLabel
+        Left = 0
+        Top = 0
+        Width = 236
+        Height = 26
+        Align = alTop
+        Alignment = taCenter
+        Caption = #1055#1086#1076#1090#1074#1077#1088#1076#1080#1090#1077' '#1076#1086#1089#1090#1091#1087' '#1087#1088#1080#1083#1086#1078#1077#1085#1080#1102' '#1074' '#1073#1088#1072#1091#1079#1077#1088#1077' '#1080' '#1085#1072#1078#1084#1080#1090#1077' '#39#1055#1088#1080#1085#1103#1090#1100#39
+        WordWrap = True
+        ExplicitWidth = 235
+      end
       object AcceptButton: TButton
         Left = 3
         Top = 72
