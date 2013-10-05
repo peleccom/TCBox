@@ -3,10 +3,10 @@ unit LogInUnit;
 interface
 
 uses
-  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants,
+  System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls,
-  DropboxSession, OAuth, ShellApi, Vcl.ComCtrls, Vcl.Buttons, Vcl.ExtCtrls
-  ;
+  DropboxSession, OAuth, ShellApi, Vcl.ComCtrls, Vcl.Buttons, Vcl.ExtCtrls;
 
 type
   TLogInForm = class(TForm)
@@ -34,7 +34,7 @@ type
   private
     { Private declarations }
   public
-      session: TDropboxSession;
+    session: TDropboxSession;
     { Public declarations }
   end;
 
@@ -50,11 +50,16 @@ var
   token: TOAuthToken;
   url: string;
 begin
-  token := session.obtainRequestToken();
-  url := session.buildAuthorizeUrl(token, '');
-  ShellExecute(0, PChar('open'), PChar(url), Nil, Nil, SW_SHOW);
-  Sleep(3000);
-  PageControl1.ActivePageIndex := 1;
+  try
+    token := session.obtainRequestToken();
+    url := session.buildAuthorizeUrl(token, '');
+    ShellExecute(0, PChar('open'), PChar(url), Nil, Nil, SW_SHOW);
+    Sleep(3000);
+    PageControl1.ActivePageIndex := 1;
+  except
+    on E: Exception do
+      ShowMessage('Error: ' + E.Message);
+  end;
 end;
 
 procedure TLogInForm.SignOutClick(Sender: TObject);
@@ -66,31 +71,37 @@ end;
 procedure TLogInForm.TabSheet1Show(Sender: TObject);
 begin
   if session.isLinked() then
-    begin
-      // logged in
-      Enter.Visible := True;
-      SignIn.Visible := False;
-      SignOut.Visible := True;
-    end
-    else
-    begin
-      Enter.Visible := False;
-      SignIn.Visible := True;
-      SignOut.Visible := False;
-    end;
+  begin
+    // logged in
+    Enter.Visible := True;
+    SignIn.Visible := False;
+    SignOut.Visible := True;
+  end
+  else
+  begin
+    Enter.Visible := False;
+    SignIn.Visible := True;
+    SignOut.Visible := False;
+  end;
 end;
 
 procedure TLogInForm.AcceptButtonClick(Sender: TObject);
 begin
-  session.obtainAccessToken();
-  PageControl1.ActivePageIndex := 0;
-  if session.isLinked() then
+  try
+    session.obtainAccessToken();
+    PageControl1.ActivePageIndex := 0;
+    if session.isLinked() then
     begin
       PageControl1.ActivePageIndex := 2;
     end
-  else
-    PageControl1.ActivePageIndex := 0;
-  //ModalResult :=  mrOk;
+    else
+      PageControl1.ActivePageIndex := 0;
+  except
+    on E: Exception do
+      ShowMessage('Error: ' + E.Message);
+  end;
+
+  // ModalResult :=  mrOk;
 end;
 
 procedure TLogInForm.CancelButtonClick(Sender: TObject);
@@ -101,23 +112,23 @@ end;
 constructor TLogInForm.Create(AOwner: TComponent; session: TDropboxSession);
 begin
   inherited Create(AOwner);
-  Self.session := session;
+  self.session := session;
 end;
 
 procedure TLogInForm.EnterClick(Sender: TObject);
 begin
-  ModalResult :=  mrOk;
+  ModalResult := mrOk;
 end;
 
 procedure TLogInForm.FormCreate(Sender: TObject);
 var
   page: Integer;
 begin
-   for page := 0 to PageControl1.PageCount - 1 do
-   begin
-     PageControl1.Pages[page].TabVisible := false;
-   end;
-   PageControl1.ActivePageIndex := 0;
+  for page := 0 to PageControl1.PageCount - 1 do
+  begin
+    PageControl1.Pages[page].TabVisible := False;
+  end;
+  PageControl1.ActivePageIndex := 0;
 end;
 
 end.

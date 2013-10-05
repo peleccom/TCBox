@@ -68,7 +68,7 @@ object LogInForm: TLogInForm
       end
       object SignIn: TButton
         Left = 24
-        Top = 124
+        Top = 116
         Width = 185
         Height = 29
         Anchors = []
