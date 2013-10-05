@@ -48,9 +48,6 @@ var
   token: TOAuthToken;
   url: string;
 begin
-  SignIn.Visible := False;
-  SignOut.Visible := True;
-
   token := session.obtainRequestToken();
   url := session.buildAuthorizeUrl(token, '');
   ShellExecute(0, PChar('open'), PChar(url), Nil, Nil, SW_SHOW);
@@ -60,9 +57,8 @@ end;
 
 procedure TLogInForm.SignOutClick(Sender: TObject);
 begin
-  SignIn.Visible := True;
-  SignOut.Visible := False;
   session.unlink();
+  TabSheet1Show(self);
 end;
 
 procedure TLogInForm.TabSheet1Show(Sender: TObject);

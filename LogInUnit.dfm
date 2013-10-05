@@ -37,31 +37,31 @@ object LogInForm: TLogInForm
         184)
       object Enter: TButton
         Left = 24
-        Top = 72
-        Width = 75
+        Top = 38
+        Width = 185
         Height = 28
         Anchors = []
-        Caption = #1055#1088#1086#1076#1086#1083#1078#1080#1090#1100
+        Caption = #1042#1093#1086#1076
         TabOrder = 0
         OnClick = EnterClick
       end
       object SignOut: TButton
-        Left = 124
-        Top = 72
-        Width = 75
+        Left = 24
+        Top = 82
+        Width = 185
         Height = 28
         Anchors = []
-        Caption = #1042#1099#1093#1086#1076
+        Caption = #1057#1084#1077#1085#1080#1090#1100' '#1087#1086#1083#1100#1079#1086#1074#1072#1090#1077#1083#1103
         TabOrder = 1
         OnClick = SignOutClick
       end
       object SignIn: TButton
         Left = 24
-        Top = 116
-        Width = 75
+        Top = 124
+        Width = 185
         Height = 29
         Anchors = []
-        Caption = #1042#1093#1086#1076
+        Caption = #1040#1074#1090#1086#1088#1080#1079#1086#1074#1072#1090#1100#1089#1103
         TabOrder = 2
         OnClick = SignInClick
       end
@@ -76,9 +76,9 @@ object LogInForm: TLogInForm
         236
         184)
       object AcceptButton: TButton
-        Left = 19
+        Left = 3
         Top = 72
-        Width = 70
+        Width = 102
         Height = 28
         Anchors = []
         Caption = #1055#1088#1080#1085#1103#1090#1100
@@ -86,9 +86,9 @@ object LogInForm: TLogInForm
         OnClick = AcceptButtonClick
       end
       object CancelButton: TButton
-        Left = 134
+        Left = 131
         Top = 72
-        Width = 75
+        Width = 102
         Height = 28
         Anchors = []
         Caption = #1054#1090#1082#1083#1086#1085#1080#1090#1100
