@@ -205,10 +205,13 @@ begin
         token := DropboxSession.obtainRequestToken();
         url := DropboxSession.buildAuthorizeUrl(token, '');
         ShellExecute(0, PChar('open'), PChar(url), Nil, Nil, SW_SHOW);
+        Sleep(7000); // wait for browser
         if confirm() then
         begin
           DropboxSession.obtainAccessToken();
-        end;
+        end
+        else
+          Exit;
         DropboxSession.SaveAccessToken(AccessKeyFullFileName);
         Result := 0;
 
@@ -267,7 +270,7 @@ begin
       FindData := PFindNextRec.PList.Items[0];
       PFindNextRec.index := 1;
       Result := THandle(PFindNextRec);
-      exit();
+      Exit();
     end
     else
     begin
@@ -366,14 +369,14 @@ begin
     FileExists(LocalName) then
   begin
     Result := FS_FILE_EXISTS;
-    exit;
+    Exit;
   end;
   filemode := fmCreate;
   if (CopyFlags and FS_COPYFLAGS_RESUME) <> 0 then
   // Resume not supported
   begin
     Result := FS_FILE_NOTSUPPORTED;
-    exit;
+    Exit;
   end;
   fs := nil;
   handler := nil;
@@ -383,7 +386,7 @@ begin
       then
       begin
         Result := FS_FILE_NOTSUPPORTED;
-        exit;
+        Exit;
       end;
       fs := TFileStream.Create(LocalName, filemode);
       handler := TDownloadEventHandler.Create(remotefilename, LocalName);
@@ -395,7 +398,7 @@ begin
         FreeAndNil(fs);
         DeleteFile(LocalName);
         Result := FS_FILE_USERABORT;
-        exit;
+        Exit;
       end
       else
       begin
@@ -410,7 +413,7 @@ begin
               Log('Exception in GetFile(delete remote file) ' + E.ClassName +
                 ' ' + E.Message);
               Result := FS_FILE_NOTSUPPORTED;
-              exit;
+              Exit;
             end;
           end;
 
@@ -510,12 +513,12 @@ begin
     DropboxClient.exists(remotefilename)) then
   begin
     Result := FS_FILE_EXISTS;
-    exit;
+    Exit;
   end;
   if (CopyFlags and FS_COPYFLAGS_RESUME) <> 0 then
   begin
     Result := FS_FILE_NOTSUPPORTED;
-    exit;
+    Exit;
   end;
   if (CopyFlags and FS_COPYFLAGS_OVERWRITE) <> 0 then
     // delete file
@@ -527,7 +530,7 @@ begin
         Log('Exception in PUTFile(delete remote file) ' + E.ClassName + ' ' +
           E.Message);
         Result := FS_FILE_NOTSUPPORTED;
-        exit;
+        Exit;
       end;
     end;
   fs := nil;
@@ -543,7 +546,7 @@ begin
         // close filestream and delete file
         fs.Free;
         Result := FS_FILE_USERABORT;
-        exit;
+        Exit;
       end
       else
       begin
@@ -551,7 +554,7 @@ begin
         Result := FS_FILE_OK;
         if (CopyFlags and FS_COPYFLAGS_MOVE) <> 0 then
           DeleteFile(LocalName);
-        exit;
+        Exit;
       end;
 
     finally
@@ -603,14 +606,14 @@ begin
   if not OverWrite and newFileExists then
   begin
     Result := FS_FILE_EXISTS;
-    exit;
+    Exit;
   end;
   if OverWrite and newFileExists then
     try
       DropboxClient.delete(newFileName);
     except
       Result := FS_FILE_NOTSUPPORTED;
-      exit;
+      Exit;
     end;
   try
     if Move then
@@ -631,7 +634,7 @@ begin
     begin
       Log('Exception in FsRenMovFileW ' + E.ClassName + ' ' + E.Message);
       Result := FS_FILE_WRITEERROR;
-      exit;
+      Exit;
     end;
   end;
 end;
