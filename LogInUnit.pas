@@ -187,12 +187,13 @@ begin
       bufString := stringStream.DataString;
       bufString := decrypt(bufString);
       // check signature
-      if (pos(bufString, SignatureString) <> 1) then
+      if (pos(SignatureString, bufString) <> 1) then
       begin
         Result := False;
         exit;
       end;
-
+      //delete signature
+      bufString := Copy(bufString, Length(SignatureString)+1, length(bufString)- length(SignatureString));
       stringStream.Clear;
       stringStream.WriteString(bufString);
       stringStream.Seek(0, soFromBeginning);
