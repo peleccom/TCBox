@@ -40,8 +40,10 @@ uses System.Classes, SysUtils, OAuth, IdURI, DropboxRest, Data.DBXJSON;
            var requestheaders: TStringList; params: TStringList=nil;
            method: string='GET'): string;
     procedure buildAccessHeaders(method, resourse_url: string; params: TStringList; request_token: TOAuthToken;var headers_out,params_out :TStringList);
-    function SaveAccessToken(filename : string) : Boolean;
-    function LoadAccessToken(filename : string) : Boolean;
+    function SaveAccessToken(filename : string) : Boolean;overload;
+    function SaveAccessToken(s: TStream) : Boolean;overload;
+    function LoadAccessToken(filename : string) : Boolean;overload;
+    function LoadAccessToken(s: TStream) : Boolean;overload;
   end;
 
 implementation
@@ -208,10 +210,32 @@ begin
     Result := False;
 end;
 
+function TDropboxSession.LoadAccessToken(s: TStream): Boolean;
+var
+  sl : TStringList;
+  t : TOAuthToken;
+begin
+  sl := TStringList.Create;
+  t := TOAuthToken.Create('','');
+  Result := False;
+  try
+    try
+      sl.LoadFromStream(s);
+      t.FromString(sl.Text);
+      setToken(t.Key, t.Secret);
+      Result := True;
+    finally
+      t.Free;
+      sl.Free;
+    end;
+  except
+  end;
+end;
+
 function TDropboxSession.LoadAccessToken(filename: string): Boolean;
 var
-sl : TStringList;
-t : TOAuthToken;
+  sl : TStringList;
+  t : TOAuthToken;
 begin
   sl := TStringList.Create;
   t := TOAuthToken.Create('','');
@@ -303,6 +327,28 @@ begin
   end;
     ARequest.ToHeader(requestheaders);
     ARequest.Free;
+end;
+
+function TDropboxSession.SaveAccessToken(s: TStream): Boolean;
+var
+  t : TOAuthToken;
+  sl : TStringList;
+begin
+  Result := False;
+  try
+    t := getAccessToken();
+    sl := TStringList.Create;
+    sl.Text := t.AsString;
+    try
+      sl.SaveToStream(s);
+      Result := True;
+    finally
+      sl.Free;
+    end;
+  except
+
+  end;
+
 end;
 
 function TDropboxSession.SaveAccessToken(filename: string): Boolean;
