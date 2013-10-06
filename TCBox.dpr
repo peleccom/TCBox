@@ -213,36 +213,6 @@ begin
   DropboxSession := TDropboxSession.Create(APP_KEY, APP_SECRET,
     TAccessType.dropbox);
   DropboxClient := TDropboxClient.Create(DropboxSession);
-  { if not DropboxSession.LoadAccessToken(AccessKeyFullFileName) then
-    begin
-    try
-    try
-    token := DropboxSession.obtainRequestToken();
-    url := DropboxSession.buildAuthorizeUrl(token, '');
-    ShellExecute(0, PChar('open'), PChar(url), Nil, Nil, SW_SHOW);
-    Sleep(7000); // wait for browser
-    if confirm() then
-    begin
-    DropboxSession.obtainAccessToken();
-    end
-    else
-    Exit;
-    DropboxSession.SaveAccessToken(AccessKeyFullFileName);
-    Result := 0;
-
-    finally
-
-    end;
-    except
-    on E1: ErrorResponse do
-    Log('FSInit: Error response ' + E1.Message);
-    on E2: RESTSocketError do
-    Log('FSInit: Rest socket Error ' + E2.Message);
-
-    on E3: Exception do
-    Log('FSInit: Error ' + E3.Message);
-    end;
-    end; }
   ShowDllFormModal();
 end;
 
