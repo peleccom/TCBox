@@ -8,6 +8,9 @@ uses
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls,
   DropboxSession, OAuth, ShellApi, Vcl.ComCtrls, Vcl.Buttons, Vcl.ExtCtrls;
 
+const
+  SignatureString = 'TCBox1_';
+
 type
   TLogInForm = class(TForm)
     PageControl1: TPageControl;
@@ -40,6 +43,10 @@ type
     function saveKey(): boolean;
     function loadKey(): boolean;
     function deleteKey(): boolean;
+
+    // crypt fucntions
+    function encrypt(data: string): string;
+    function decrypt(data: string): string;
   public
     session: TDropboxSession;
     { Public declarations }
@@ -131,10 +138,22 @@ begin
   loadKey();
 end;
 
+function TLogInForm.decrypt(data: string): string;
+begin
+  //
+  Result := data;
+end;
+
 function TLogInForm.deleteKey: boolean;
 begin
   //
   Result := DeleteFile(accessKeyFilename);
+end;
+
+function TLogInForm.encrypt(data: string): string;
+begin
+  //
+  Result := data;
 end;
 
 procedure TLogInForm.EnterClick(Sender: TObject);
@@ -156,14 +175,31 @@ end;
 function TLogInForm.loadKey: boolean;
 var
   keyFileStream: TFileStream;
+  stringStream: TStringStream;
+  bufString: string;
 begin
   Result := True;
   try
     keyFileStream := TFileStream.Create(accessKeyFilename, fmOpenRead);
+    stringStream := TStringStream.Create();
     try
-      Result := session.LoadAccessToken(keyFileStream);
+      stringStream.LoadFromStream(keyFileStream);;
+      bufString := stringStream.DataString;
+      bufString := decrypt(bufString);
+      // check signature
+      if (pos(bufString, SignatureString) <> 1) then
+      begin
+        Result := False;
+        exit;
+      end;
+
+      stringStream.Clear;
+      stringStream.WriteString(bufString);
+      stringStream.Seek(0, soFromBeginning);
+      session.LoadAccessToken(stringStream);
     finally
       keyFileStream.Free;
+      stringStream.Free;
     end;
   except
     Result := False;
@@ -173,14 +209,24 @@ end;
 function TLogInForm.saveKey: boolean;
 var
   keyFileStream: TFileStream;
+  stringStream: TStringStream;
+  bufString: string;
 begin
   Result := True;
   try
     keyFileStream := TFileStream.Create(accessKeyFilename, fmCreate);
+    stringStream := TStringStream.Create();
+
     try
-      Result := session.SaveAccessToken(keyFileStream);
+      session.SaveAccessToken(stringStream);
+      bufString := stringStream.DataString;
+      bufString := encrypt(SignatureString + bufString);
+      stringStream.Clear;
+      stringStream.WriteString(bufString);
+      stringStream.SaveToStream(keyFileStream);
     finally
       keyFileStream.Free;
+      stringStream.Free;
     end;
   except
     Result := False;

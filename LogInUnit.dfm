@@ -30,6 +30,10 @@ object LogInForm: TLogInForm
       Caption = 'TabSheet1'
       TabVisible = False
       OnShow = TabSheet1Show
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       DesignSize = (
         236
         184)
@@ -79,6 +83,10 @@ object LogInForm: TLogInForm
       Caption = 'TabSheet2'
       ImageIndex = 1
       TabVisible = False
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       DesignSize = (
         236
         184)
