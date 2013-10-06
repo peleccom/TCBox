@@ -30,8 +30,6 @@ object LogInForm: TLogInForm
       Caption = 'TabSheet1'
       TabVisible = False
       OnShow = TabSheet1Show
-      ExplicitLeft = 8
-      ExplicitTop = 10
       DesignSize = (
         236
         184)
@@ -68,7 +66,7 @@ object LogInForm: TLogInForm
       end
       object SignIn: TButton
         Left = 24
-        Top = 116
+        Top = 124
         Width = 185
         Height = 29
         Anchors = []
@@ -81,8 +79,6 @@ object LogInForm: TLogInForm
       Caption = 'TabSheet2'
       ImageIndex = 1
       TabVisible = False
-      ExplicitLeft = 8
-      ExplicitTop = 10
       DesignSize = (
         236
         184)
@@ -93,7 +89,9 @@ object LogInForm: TLogInForm
         Height = 26
         Align = alTop
         Alignment = taCenter
-        Caption = #1055#1086#1076#1090#1074#1077#1088#1076#1080#1090#1077' '#1076#1086#1089#1090#1091#1087' '#1087#1088#1080#1083#1086#1078#1077#1085#1080#1102' '#1074' '#1073#1088#1072#1091#1079#1077#1088#1077' '#1080' '#1085#1072#1078#1084#1080#1090#1077' '#39#1055#1088#1080#1085#1103#1090#1100#39
+        Caption = 
+          #1055#1086#1076#1090#1074#1077#1088#1076#1080#1090#1077' '#1076#1086#1089#1090#1091#1087' '#1087#1088#1080#1083#1086#1078#1077#1085#1080#1102' '#1074' '#1073#1088#1072#1091#1079#1077#1088#1077' '#1080' '#1079#1072#1090#1077#1084' '#1085#1072#1078#1084#1080#1090#1077' '#39#1055#1088#1080#1085#1103#1090 +
+          #1100#39
         WordWrap = True
         ExplicitWidth = 235
       end
@@ -122,8 +120,6 @@ object LogInForm: TLogInForm
       Caption = 'TabSheet3'
       ImageIndex = 2
       TabVisible = False
-      ExplicitLeft = 8
-      ExplicitTop = 10
       object ConnectResultLabel: TLabel
         Left = 0
         Top = 0
@@ -143,9 +139,7 @@ object LogInForm: TLogInForm
         Kind = bkOK
         NumGlyphs = 2
         TabOrder = 0
-        ExplicitLeft = 72
-        ExplicitTop = 144
-        ExplicitWidth = 75
+        OnClick = BitBtn1Click
       end
     end
   end

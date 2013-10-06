@@ -7,6 +7,7 @@ interface
 const
 	APP_KEY = '';
 	APP_SECRET ='';
+	KEYFILE_PASS = '';
 implementation
 
 end.

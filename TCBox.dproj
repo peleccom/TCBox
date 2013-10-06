@@ -82,8 +82,8 @@
 			<DCCReference Include="..\DropboxAPI\iso8601Unit.pas"/>
 			<DCCReference Include="LogInUnit.pas">
 				<Form>LogInForm</Form>
-				<FormType>dfm</FormType>
 			</DCCReference>
+			<DCCReference Include="mycrypt.pas"/>
 			<None Include="TCBox.todo"/>
 			<BuildConfiguration Include="Debug">
 				<Key>Cfg_2</Key>
