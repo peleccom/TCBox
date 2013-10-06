@@ -6,7 +6,8 @@ uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants,
   System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls,
-  DropboxSession, OAuth, ShellApi, Vcl.ComCtrls, Vcl.Buttons, Vcl.ExtCtrls;
+  DropboxSession, OAuth, ShellApi, Vcl.ComCtrls, Vcl.Buttons, Vcl.ExtCtrls,
+  mycrypt, IdCoderMIME, AccessConfig;
 
 const
   SignatureString = 'TCBox1_';
@@ -139,9 +140,11 @@ begin
 end;
 
 function TLogInForm.decrypt(data: string): string;
+var
+  buf: string;
 begin
-  //
-  Result := data;
+  buf := TIdDecoderMIME.DecodeString(data);
+  Result := decryptstring(buf, KEYFILE_PASS);
 end;
 
 function TLogInForm.deleteKey: boolean;
@@ -151,9 +154,11 @@ begin
 end;
 
 function TLogInForm.encrypt(data: string): string;
+var
+  buf: string;
 begin
-  //
-  Result := data;
+  buf := Cryptstring(data, KEYFILE_PASS);
+  Result := TIdEncoderMIME.EncodeString(buf);
 end;
 
 procedure TLogInForm.EnterClick(Sender: TObject);
@@ -192,8 +197,9 @@ begin
         Result := False;
         exit;
       end;
-      //delete signature
-      bufString := Copy(bufString, Length(SignatureString)+1, length(bufString)- length(SignatureString));
+      // delete signature
+      bufString := Copy(bufString, Length(SignatureString) + 1,
+        Length(bufString) - Length(SignatureString));
       stringStream.Clear;
       stringStream.WriteString(bufString);
       stringStream.Seek(0, soFromBeginning);

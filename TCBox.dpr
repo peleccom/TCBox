@@ -19,7 +19,8 @@ uses
   DropboxSession in '..\DropboxAPI\DropboxSession.pas',
   OAuth in '..\DropboxAPI\OAuth.pas',
   iso8601Unit in '..\DropboxAPI\iso8601Unit.pas',
-  LogInUnit in 'LogInUnit.pas' {LogInForm};
+  LogInUnit in 'LogInUnit.pas' {LogInForm} ,
+  mycrypt in 'mycrypt.pas';
 
 // httpGet in 'httpGet.pas';
 

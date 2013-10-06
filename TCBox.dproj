@@ -83,6 +83,7 @@
 			<DCCReference Include="LogInUnit.pas">
 				<Form>LogInForm</Form>
 			</DCCReference>
+			<DCCReference Include="mycrypt.pas"/>
 			<None Include="TCBox.todo"/>
 			<BuildConfiguration Include="Debug">
 				<Key>Cfg_2</Key>
