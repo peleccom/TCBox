@@ -188,7 +188,7 @@ procedure ShowDllFormModal;
 var
   modal: TModalResult;
 begin
-  LogInForm := TLogInForm.Create(nil, DropboxSession);
+  LogInForm := TLogInForm.Create(nil, DropboxSession, AccessKeyFullFileName);
   LogInForm.Icon.LoadFromResourceName(HInstance, '1');
   modal := LogInForm.ShowModal;
   if modal = mrOk then

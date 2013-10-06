@@ -21,7 +21,7 @@ object LogInForm: TLogInForm
     Top = 0
     Width = 244
     Height = 194
-    ActivePage = TabSheet1
+    ActivePage = TabSheet3
     Align = alClient
     MultiLine = True
     Style = tsFlatButtons
@@ -30,8 +30,6 @@ object LogInForm: TLogInForm
       Caption = 'TabSheet1'
       TabVisible = False
       OnShow = TabSheet1Show
-      ExplicitLeft = 8
-      ExplicitTop = 10
       DesignSize = (
         236
         184)
@@ -68,7 +66,7 @@ object LogInForm: TLogInForm
       end
       object SignIn: TButton
         Left = 24
-        Top = 116
+        Top = 124
         Width = 185
         Height = 29
         Anchors = []
@@ -81,8 +79,6 @@ object LogInForm: TLogInForm
       Caption = 'TabSheet2'
       ImageIndex = 1
       TabVisible = False
-      ExplicitLeft = 8
-      ExplicitTop = 10
       DesignSize = (
         236
         184)
@@ -122,8 +118,6 @@ object LogInForm: TLogInForm
       Caption = 'TabSheet3'
       ImageIndex = 2
       TabVisible = False
-      ExplicitLeft = 8
-      ExplicitTop = 10
       object ConnectResultLabel: TLabel
         Left = 0
         Top = 0
@@ -143,9 +137,7 @@ object LogInForm: TLogInForm
         Kind = bkOK
         NumGlyphs = 2
         TabOrder = 0
-        ExplicitLeft = 72
-        ExplicitTop = 144
-        ExplicitWidth = 75
+        OnClick = BitBtn1Click
       end
     end
   end

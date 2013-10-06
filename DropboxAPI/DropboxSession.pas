@@ -248,23 +248,18 @@ end;
 
 function TDropboxSession.LoadAccessToken(filename: string): boolean;
 var
-  sl: TStringList;
-  t: TOAuthToken;
+  keyFileStream: TFileStream;
 begin
-  sl := TStringList.Create;
-  t := TOAuthToken.Create('', '');
-  Result := False;
+  Result := True;
   try
+    keyFileStream := TFileStream.Create(filename, fmOpenRead);
     try
-      sl.LoadFromFile(filename);
-      t.FromString(sl.Text);
-      setToken(t.key, t.Secret);
-      Result := True;
+      Result := LoadAccessToken(keyFileStream);
     finally
-      t.Free;
-      sl.Free;
+      keyFileStream.Free;
     end;
   except
+    Result := False;
   end;
 end;
 
@@ -372,22 +367,18 @@ end;
 
 function TDropboxSession.SaveAccessToken(filename: string): boolean;
 var
-  t: TOAuthToken;
-  sl: TStringList;
+  keyFileStream: TFileStream;
 begin
-  Result := False;
+  Result := True;
   try
-    t := getAccessToken();
-    sl := TStringList.Create;
-    sl.Text := t.AsString;
+    keyFileStream := TFileStream.Create(filename, fmCreate);
     try
-      sl.SaveToFile(filename);
-      Result := True;
+      Result := SaveAccessToken(keyFileStream);
     finally
-      sl.Free;
+      keyFileStream.Free;
     end;
   except
-
+    Result := False;
   end;
 end;
 

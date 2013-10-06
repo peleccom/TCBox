@@ -82,7 +82,6 @@
 			<DCCReference Include="..\DropboxAPI\iso8601Unit.pas"/>
 			<DCCReference Include="LogInUnit.pas">
 				<Form>LogInForm</Form>
-				<FormType>dfm</FormType>
 			</DCCReference>
 			<None Include="TCBox.todo"/>
 			<BuildConfiguration Include="Debug">

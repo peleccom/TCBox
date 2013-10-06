@@ -23,7 +23,8 @@ type
     CancelButton: TButton;
     AcceptPageLabel: TLabel;
     EnterPageLabel: TLabel;
-    constructor Create(AOwner: TComponent; session: TDropboxSession);
+    constructor Create(AOwner: TComponent; session: TDropboxSession;
+      accessKeyFilename: string);
     procedure SignOutClick(Sender: TObject);
     procedure SignInClick(Sender: TObject);
     procedure EnterClick(Sender: TObject);
@@ -31,8 +32,14 @@ type
     procedure AcceptButtonClick(Sender: TObject);
     procedure CancelButtonClick(Sender: TObject);
     procedure TabSheet1Show(Sender: TObject);
+    procedure BitBtn1Click(Sender: TObject);
   private
     { Private declarations }
+    accessKeyFilename: string;
+
+    function saveKey(): boolean;
+    function loadKey(): boolean;
+    function deleteKey(): boolean;
   public
     session: TDropboxSession;
     { Public declarations }
@@ -64,6 +71,7 @@ end;
 
 procedure TLogInForm.SignOutClick(Sender: TObject);
 begin
+  deleteKey();
   session.unlink();
   TabSheet1Show(self);
 end;
@@ -104,15 +112,29 @@ begin
   // ModalResult :=  mrOk;
 end;
 
+procedure TLogInForm.BitBtn1Click(Sender: TObject);
+begin
+  saveKey();
+end;
+
 procedure TLogInForm.CancelButtonClick(Sender: TObject);
 begin
   PageControl1.ActivePageIndex := 0;
 end;
 
-constructor TLogInForm.Create(AOwner: TComponent; session: TDropboxSession);
+constructor TLogInForm.Create(AOwner: TComponent; session: TDropboxSession;
+  accessKeyFilename: string);
 begin
   inherited Create(AOwner);
   self.session := session;
+  self.accessKeyFilename := accessKeyFilename;
+  loadKey();
+end;
+
+function TLogInForm.deleteKey: boolean;
+begin
+  //
+  Result := DeleteFile(accessKeyFilename);
 end;
 
 procedure TLogInForm.EnterClick(Sender: TObject);
@@ -129,6 +151,40 @@ begin
     PageControl1.Pages[page].TabVisible := False;
   end;
   PageControl1.ActivePageIndex := 0;
+end;
+
+function TLogInForm.loadKey: boolean;
+var
+  keyFileStream: TFileStream;
+begin
+  Result := True;
+  try
+    keyFileStream := TFileStream.Create(accessKeyFilename, fmOpenRead);
+    try
+      Result := session.LoadAccessToken(keyFileStream);
+    finally
+      keyFileStream.Free;
+    end;
+  except
+    Result := False;
+  end;
+end;
+
+function TLogInForm.saveKey: boolean;
+var
+  keyFileStream: TFileStream;
+begin
+  Result := True;
+  try
+    keyFileStream := TFileStream.Create(accessKeyFilename, fmCreate);
+    try
+      Result := session.SaveAccessToken(keyFileStream);
+    finally
+      keyFileStream.Free;
+    end;
+  except
+    Result := False;
+  end;
 end;
 
 end.
