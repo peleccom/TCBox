@@ -184,7 +184,7 @@ begin
     Result := False; // go out
 end;
 
-procedure ShowDllFormModal;
+function ShowDllFormModal: boolean;
 var
   modal: TModalResult;
 begin
@@ -192,9 +192,9 @@ begin
   LogInForm.Icon.LoadFromResourceName(HInstance, '1');
   modal := LogInForm.ShowModal;
   if modal = mrOk then
-    ShowMessage('Ok')
+    Result := True
   else
-    ShowMessage('Fail');
+    Result := False;
   LogInForm.Free;
 end;
 
@@ -264,7 +264,15 @@ var
   FindDatatmp: tWIN32FINDDATAW;
   PFindNextRec: ^TFindNextRecord;
 begin
+  if not DropboxSession.isLinked() then
+  begin
+    if not ShowDllFormModal() then
+    begin
+      Result := INVALID_HANDLE_VALUE;
+      exit;
+    end;
 
+  end;
   Result := INVALID_HANDLE_VALUE;
   New(PFindNextRec);
   New(PFindNextRec.PList);
@@ -286,7 +294,7 @@ begin
       FindData := PFindNextRec.PList.Items[0];
       PFindNextRec.index := 1;
       Result := THandle(PFindNextRec);
-      Exit();
+      exit();
     end
     else
     begin
@@ -385,14 +393,14 @@ begin
     FileExists(LocalName) then
   begin
     Result := FS_FILE_EXISTS;
-    Exit;
+    exit;
   end;
   filemode := fmCreate;
   if (CopyFlags and FS_COPYFLAGS_RESUME) <> 0 then
   // Resume not supported
   begin
     Result := FS_FILE_NOTSUPPORTED;
-    Exit;
+    exit;
   end;
   fs := nil;
   handler := nil;
@@ -402,7 +410,7 @@ begin
       then
       begin
         Result := FS_FILE_NOTSUPPORTED;
-        Exit;
+        exit;
       end;
       fs := TFileStream.Create(LocalName, filemode);
       handler := TDownloadEventHandler.Create(remotefilename, LocalName);
@@ -414,7 +422,7 @@ begin
         FreeAndNil(fs);
         DeleteFile(LocalName);
         Result := FS_FILE_USERABORT;
-        Exit;
+        exit;
       end
       else
       begin
@@ -429,7 +437,7 @@ begin
               Log('Exception in GetFile(delete remote file) ' + E.ClassName +
                 ' ' + E.Message);
               Result := FS_FILE_NOTSUPPORTED;
-              Exit;
+              exit;
             end;
           end;
 
@@ -529,12 +537,12 @@ begin
     DropboxClient.exists(remotefilename)) then
   begin
     Result := FS_FILE_EXISTS;
-    Exit;
+    exit;
   end;
   if (CopyFlags and FS_COPYFLAGS_RESUME) <> 0 then
   begin
     Result := FS_FILE_NOTSUPPORTED;
-    Exit;
+    exit;
   end;
   if (CopyFlags and FS_COPYFLAGS_OVERWRITE) <> 0 then
     // delete file
@@ -546,7 +554,7 @@ begin
         Log('Exception in PUTFile(delete remote file) ' + E.ClassName + ' ' +
           E.Message);
         Result := FS_FILE_NOTSUPPORTED;
-        Exit;
+        exit;
       end;
     end;
   fs := nil;
@@ -562,7 +570,7 @@ begin
         // close filestream and delete file
         fs.Free;
         Result := FS_FILE_USERABORT;
-        Exit;
+        exit;
       end
       else
       begin
@@ -570,7 +578,7 @@ begin
         Result := FS_FILE_OK;
         if (CopyFlags and FS_COPYFLAGS_MOVE) <> 0 then
           DeleteFile(LocalName);
-        Exit;
+        exit;
       end;
 
     finally
@@ -622,14 +630,14 @@ begin
   if not OverWrite and newFileExists then
   begin
     Result := FS_FILE_EXISTS;
-    Exit;
+    exit;
   end;
   if OverWrite and newFileExists then
     try
       DropboxClient.delete(newFileName);
     except
       Result := FS_FILE_NOTSUPPORTED;
-      Exit;
+      exit;
     end;
   try
     if Move then
@@ -650,7 +658,7 @@ begin
     begin
       Log('Exception in FsRenMovFileW ' + E.ClassName + ' ' + E.Message);
       Result := FS_FILE_WRITEERROR;
-      Exit;
+      exit;
     end;
   end;
 end;
