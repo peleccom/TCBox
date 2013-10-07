@@ -6,8 +6,9 @@ uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants,
   System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls,
-  DropboxSession, OAuth, ShellApi, Vcl.ComCtrls, Vcl.Buttons, Vcl.ExtCtrls,
-  mycrypt, IdCoderMIME, AccessConfig, Log4D;
+  DropboxClient, DropboxSession, Vcl.Buttons, Vcl.ComCtrls, OAuth, ShellApi,
+  Vcl.ExtCtrls,
+  mycrypt, IdCoderMIME, AccessConfig, Log4D, Data.DBxjson;
 
 const
   SignatureString = 'TCBox1_';
@@ -20,15 +21,20 @@ type
     TabSheet3: TTabSheet;
     ConnectResultLabel: TLabel;
     BitBtn1: TBitBtn;
-    Enter: TButton;
-    SignOut: TButton;
-    SignIn: TButton;
     AcceptButton: TButton;
     CancelButton: TButton;
     AcceptPageLabel: TLabel;
     EnterPageLabel: TLabel;
+    Label1: TLabel;
+    ButtonsPageControl: TPageControl;
+    TabSheet4: TTabSheet;
+    TabSheet5: TTabSheet;
+    Enter: TButton;
+    SignOut: TButton;
+    SignIn: TButton;
+    UserNameLabel: TLabel;
     constructor Create(AOwner: TComponent; session: TDropboxSession;
-      accessKeyFilename: string);
+      client: TDropboxClient; accessKeyFilename: string);
     procedure SignOutClick(Sender: TObject);
     procedure SignInClick(Sender: TObject);
     procedure EnterClick(Sender: TObject);
@@ -46,10 +52,14 @@ type
     function deleteKey(): boolean;
 
     // crypt fucntions
-    function encrypt(data: string): string;
-    function decrypt(data: string): string;
+    function encrypt(Data: string): string;
+    function decrypt(Data: string): string;
+
+    // helper client functions
+    function getUserName(): string;
   public
     session: TDropboxSession;
+    client: TDropboxClient;
     { Public declarations }
   end;
 
@@ -94,15 +104,21 @@ begin
   if session.isLinked() then
   begin
     // logged in
-    Enter.Visible := True;
-    SignIn.Visible := False;
-    SignOut.Visible := True;
+    ButtonsPageControl.ActivePageIndex := 0;
+    try
+      UserNameLabel.Caption := getUserName();
+    except
+      on E: Exception do
+      begin
+        UserNameLabel.Caption := '';
+        logger.Debug('Cant get display name ' + E.ClassName+ E.Message);
+      end;
+    end;
   end
   else
   begin
-    Enter.Visible := False;
-    SignIn.Visible := True;
-    SignOut.Visible := False;
+    ButtonsPageControl.ActivePageIndex := 1;
+    UserNameLabel.Caption := '';
   end;
 end;
 
@@ -146,22 +162,23 @@ begin
 end;
 
 constructor TLogInForm.Create(AOwner: TComponent; session: TDropboxSession;
-  accessKeyFilename: string);
+  client: TDropboxClient; accessKeyFilename: string);
 begin
   inherited Create(AOwner);
   logger := TLogLogger.GetLogger('Default');
   self.session := session;
+  self.client := client;
   self.accessKeyFilename := accessKeyFilename;
   if not loadKey() then
     logger.Info('Key file not loaded');
 end;
 
-function TLogInForm.decrypt(data: string): string;
+function TLogInForm.decrypt(Data: string): string;
 var
   buf: string;
 begin
   try
-    buf := TIdDecoderMIME.DecodeString(data);
+    buf := TIdDecoderMIME.DecodeString(Data);
     Result := decryptstring(buf, KEYFILE_PASS);
   except
     Result := '';
@@ -174,12 +191,12 @@ begin
   Result := DeleteFile(accessKeyFilename);
 end;
 
-function TLogInForm.encrypt(data: string): string;
+function TLogInForm.encrypt(Data: string): string;
 var
   buf: string;
 begin
   try
-    buf := Cryptstring(data, KEYFILE_PASS);
+    buf := Cryptstring(Data, KEYFILE_PASS);
     Result := TIdEncoderMIME.EncodeString(buf);
   except
     Result := '';
@@ -199,7 +216,21 @@ begin
   begin
     PageControl1.Pages[page].TabVisible := False;
   end;
+  for page := 0 to ButtonsPageControl.PageCount - 1 do
+    ButtonsPageControl.Pages[page].TabVisible := False;
   PageControl1.ActivePageIndex := 0;
+end;
+
+function TLogInForm.getUserName: string;
+var
+  json: TJSONObject;
+begin
+  json := client.accountInfo();
+  try
+    Result := json.Get('display_name').jsonvalue.Value;
+  finally
+    json.Free;
+  end;
 end;
 
 function TLogInForm.loadKey: boolean;

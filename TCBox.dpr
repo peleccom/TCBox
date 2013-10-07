@@ -133,22 +133,11 @@ begin
   Result := StringReplace(path, '\', '/', [rfReplaceAll]);
 end;
 
-function confirm(): boolean;
-begin
-  if RequestProc(PluginNumber, RT_MsgYesNo, 'Authentification request',
-    'Confirm Authentification in your browser and press YES', nil, 0) then
-  begin
-    Result := True;
-  end
-  else
-    Result := False; // go out
-end;
-
 function ShowDllFormModal: boolean;
 var
   modal: TModalResult;
 begin
-  LogInForm := TLogInForm.Create(nil, DropboxSession, AccessKeyFullFileName);
+  LogInForm := TLogInForm.Create(nil, DropboxSession, DropboxClient, AccessKeyFullFileName);
   modal := LogInForm.ShowModal;
   if modal = mrOk then
     Result := True

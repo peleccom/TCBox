@@ -21,6 +21,7 @@ object LogInForm: TLogInForm
     Top = 0
     Width = 244
     Height = 194
+    Margins.Right = 5
     ActivePage = TabSheet1
     Align = alClient
     MultiLine = True
@@ -30,9 +31,6 @@ object LogInForm: TLogInForm
       Caption = 'TabSheet1'
       TabVisible = False
       OnShow = TabSheet1Show
-      DesignSize = (
-        236
-        184)
       object EnterPageLabel: TLabel
         Left = 0
         Top = 0
@@ -42,37 +40,91 @@ object LogInForm: TLogInForm
         Alignment = taCenter
         Caption = 'Total Commander Dropbox plugin'
         WordWrap = True
-        ExplicitWidth = 159
+        ExplicitTop = -6
       end
-      object Enter: TButton
-        Left = 24
-        Top = 38
-        Width = 185
-        Height = 28
-        Anchors = []
-        Caption = #1042#1093#1086#1076
+      object Label1: TLabel
+        Left = 0
+        Top = 13
+        Width = 236
+        Height = 13
+        Align = alTop
+        Alignment = taRightJustify
+        ExplicitLeft = 233
+        ExplicitWidth = 3
+      end
+      object ButtonsPageControl: TPageControl
+        Left = 0
+        Top = 26
+        Width = 236
+        Height = 158
+        ActivePage = TabSheet4
+        Align = alClient
+        Style = tsFlatButtons
         TabOrder = 0
-        OnClick = EnterClick
-      end
-      object SignOut: TButton
-        Left = 24
-        Top = 82
-        Width = 185
-        Height = 28
-        Anchors = []
-        Caption = #1057#1084#1077#1085#1080#1090#1100' '#1087#1086#1083#1100#1079#1086#1074#1072#1090#1077#1083#1103
-        TabOrder = 1
-        OnClick = SignOutClick
-      end
-      object SignIn: TButton
-        Left = 24
-        Top = 124
-        Width = 185
-        Height = 29
-        Anchors = []
-        Caption = #1040#1074#1090#1086#1088#1080#1079#1086#1074#1072#1090#1100#1089#1103
-        TabOrder = 2
-        OnClick = SignInClick
+        object TabSheet4: TTabSheet
+          Caption = 'TabSheet4'
+          TabVisible = False
+          DesignSize = (
+            228
+            148)
+          object UserNameLabel: TLabel
+            AlignWithMargins = True
+            Left = 3
+            Top = 3
+            Width = 215
+            Height = 38
+            Margins.Right = 10
+            Align = alTop
+            Alignment = taRightJustify
+            Caption = 'hello'
+            Color = clBtnFace
+            Font.Charset = DEFAULT_CHARSET
+            Font.Color = clGreen
+            Font.Height = -13
+            Font.Name = 'Tahoma'
+            Font.Style = [fsItalic]
+            ParentColor = False
+            ParentFont = False
+          end
+          object Enter: TButton
+            Left = 26
+            Top = 47
+            Width = 185
+            Height = 28
+            Anchors = []
+            Caption = #1042#1093#1086#1076
+            TabOrder = 0
+            OnClick = EnterClick
+          end
+          object SignOut: TButton
+            Left = 26
+            Top = 93
+            Width = 185
+            Height = 28
+            Anchors = []
+            Caption = #1057#1084#1077#1085#1080#1090#1100' '#1087#1086#1083#1100#1079#1086#1074#1072#1090#1077#1083#1103
+            TabOrder = 1
+            OnClick = SignOutClick
+          end
+        end
+        object TabSheet5: TTabSheet
+          Caption = 'TabSheet5'
+          ImageIndex = 1
+          TabVisible = False
+          DesignSize = (
+            228
+            148)
+          object SignIn: TButton
+            Left = 21
+            Top = 62
+            Width = 185
+            Height = 29
+            Anchors = []
+            Caption = #1040#1074#1090#1086#1088#1080#1079#1086#1074#1072#1090#1100#1089#1103
+            TabOrder = 0
+            OnClick = SignInClick
+          end
+        end
       end
     end
     object TabSheet2: TTabSheet
