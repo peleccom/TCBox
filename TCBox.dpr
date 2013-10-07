@@ -20,7 +20,8 @@ uses
   OAuth in '..\DropboxAPI\OAuth.pas',
   iso8601Unit in '..\DropboxAPI\iso8601Unit.pas',
   LogInUnit in 'LogInUnit.pas' {LogInForm} ,
-  mycrypt in 'mycrypt.pas';
+  mycrypt in 'mycrypt.pas',
+  Log4D in 'Log4D.pas';
 
 // httpGet in 'httpGet.pas';
 
@@ -73,51 +74,9 @@ var
   DropboxSession: TDropboxSession;
   DropboxClient: TDropboxClient;
 
-procedure AddLog(LogString: string; LogFileName: string);
-var
-  F: TFileStream;
-  PStr: PChar;
-  LengthLogString: Integer;
-  outpututf8: RawByteString;
-  isAppendMode: boolean;
-  preamble: TBytes;
-begin
-  LengthLogString := Length(LogString) + 2;
-  LogString := LogString + #13#10;
-  PStr := StrAlloc(LengthLogString + 1);
-  StrPCopy(PStr, LogString);
-  isAppendMode := False;
-  if FileExists(LogFileName) then
-  begin
-    F := TFileStream.Create(LogFileName, fmOpenWrite);
-    if F.Size < MAX_LOG_SIZE then
-      isAppendMode := True
-    else
-      F.Free;
-  end;
-  if not isAppendMode then
-  begin
-    F := TFileStream.Create(LogFileName, fmCreate);
-    preamble := TEncoding.UTF8.GetPreamble;
-    F.WriteBuffer(PAnsiChar(preamble)^, Length(preamble));
-  end
-  else
-  begin
-    F.Seek(F.Size, 0); { go to the end, append }
-  end;
-  try
-    outpututf8 := Utf8Encode(FormatDateTime('[dd-mm-yy hh:mm:ss] ', Now) +
-      LogString); // this converts UnicodeString to WideString, sadly.
-    F.WriteBuffer(PAnsiChar(outpututf8)^, Length(outpututf8));
-  finally
-    F.Free;
-  end;
-end;
-
-procedure Log(mess: String);
-begin
-  AddLog(mess, LogFullFilename);
-end;
+  logger: TLogLogger;
+  logAppender: ILogAppender;
+  logLayout: ILogLayout;
 
 function GetPluginFileName(): string;
 var
@@ -190,7 +149,6 @@ var
   modal: TModalResult;
 begin
   LogInForm := TLogInForm.Create(nil, DropboxSession, AccessKeyFullFileName);
-  LogInForm.Icon.LoadFromResourceName(HInstance, '1');
   modal := LogInForm.ShowModal;
   if modal = mrOk then
     Result := True
@@ -210,11 +168,12 @@ begin
   LogProc := pLogProcW;
   RequestProc := pRequestProcW;
   PluginNumber := PluginNr;
-  Result := 1;
+  logger.Info('Initialization');
   DropboxSession := TDropboxSession.Create(APP_KEY, APP_SECRET,
     TAccessType.dropbox);
   DropboxClient := TDropboxClient.Create(DropboxSession);
   ShowDllFormModal();
+  Result := 0;
 end;
 
 procedure Request();
@@ -273,12 +232,8 @@ begin
       SetLastError(ERROR_NO_MORE_FILES);
     end;
   except
-    on E1: ErrorResponse do
-      Log('Exception in FindFirst ' + E1.ClassName + ' ' + E1.Message);
-    on E2: RESTSocketError do
-      Log('Exception in FindFirst ' + E2.ClassName + ' ' + E2.Message);
-    on E3: Exception do
-      Log('Exception in FindFirst ' + E3.ClassName + ' ' + E3.Message);
+    on E1: Exception do
+      logger.Error('Exception in FindFirst ' + E1.ClassName + ' ' + E1.Message);
   end;
 
   // Clean a pointers if error occurred in FindFirst
@@ -307,7 +262,7 @@ begin
     end
   except
     on E: Exception do
-      Log('Exception in FindNext ' + E.ClassName + ' ' + E.Message);
+      logger.Error('Exception in FindNext ' + E.ClassName + ' ' + E.Message);
   end;
 end;
 
@@ -405,8 +360,8 @@ begin
           except
             on E: Exception do
             begin
-              Log('Exception in GetFile(delete remote file) ' + E.ClassName +
-                ' ' + E.Message);
+              logger.Error('Exception in GetFile(delete remote file) ' +
+                E.ClassName + ' ' + E.Message);
               Result := FS_FILE_NOTSUPPORTED;
               exit;
             end;
@@ -423,7 +378,7 @@ begin
   except
     on E1: ErrorResponse do
     begin
-      Log('Exception in GetFile ' + E1.ClassName + ' ' + E1.Message);
+      logger.Error('Exception in GetFile ' + E1.ClassName + ' ' + E1.Message);
       if E1.Code = 404 then
         // Remote file not found
         Result := FS_FILE_NOTFOUND
@@ -433,12 +388,12 @@ begin
     end;
     on E2: RESTSocketError do
     begin
-      Log('Exception in GetFile ' + E2.ClassName + ' ' + E2.Message);
+      logger.Error('Exception in GetFile ' + E2.ClassName + ' ' + E2.Message);
       Result := FS_FILE_READERROR;
     end;
     on E3: Exception do
     begin
-      Log('Exception in GetFile ' + E3.ClassName + ' ' + E3.Message);
+      logger.Error('Exception in GetFile ' + E3.ClassName + ' ' + E3.Message);
       Result := FS_FILE_WRITEERROR;
     end;
   end;
@@ -454,7 +409,7 @@ begin
   except
     on E: Exception do
     begin
-      Log('Exception in FsMkDirW ' + E.ClassName + ' ' + E.Message);
+      logger.Error('Exception in FsMkDirW ' + E.ClassName + ' ' + E.Message);
       Result := False;
     end;
   end;
@@ -472,7 +427,8 @@ begin
   except
     on E: Exception do
     begin
-      Log('Exception in FsRemoveDirW ' + E.ClassName + ' ' + E.Message);
+      logger.Error('Exception in FsRemoveDirW ' + E.ClassName + ' ' +
+        E.Message);
     end;
   end;
 
@@ -490,7 +446,8 @@ begin
   except
     on E3: Exception do
     begin
-      Log('Exception in FsDeleteFileW ' + E3.ClassName + ' ' + E3.Message);
+      logger.Error('Exception in FsDeleteFileW ' + E3.ClassName + ' ' +
+        E3.Message);
     end;
   end;
 end;
@@ -522,8 +479,8 @@ begin
     except
       on E: Exception do
       begin
-        Log('Exception in PUTFile(delete remote file) ' + E.ClassName + ' ' +
-          E.Message);
+        logger.Error('Exception in PUTFile(delete remote file) ' + E.ClassName +
+          ' ' + E.Message);
         Result := FS_FILE_NOTSUPPORTED;
         exit;
       end;
@@ -561,28 +518,28 @@ begin
   except
     on E1: ErrorResponse do
     begin
-      Log('Exception in PUTFile ' + E1.ClassName + ' ' + E1.Message);
+      logger.Error('Exception in PUTFile ' + E1.ClassName + ' ' + E1.Message);
       // Dropbox errors
       Result := FS_FILE_WRITEERROR;
     end;
     on E2: RESTSocketError do
     begin
-      Log('Exception in PutFile ' + E2.ClassName + ' ' + E2.Message);
+      logger.Error('Exception in PutFile ' + E2.ClassName + ' ' + E2.Message);
       Result := FS_FILE_WRITEERROR;
     end;
     on E3: EFOpenError do
     begin
-      Log('Exception in PutFile ' + E3.ClassName + ' ' + E3.Message);
+      logger.Error('Exception in PutFile ' + E3.ClassName + ' ' + E3.Message);
       Result := FS_FILE_NOTFOUND;
     end;
     on E4: EReadError do
     begin
-      Log('Exception in PutFile ' + E4.ClassName + ' ' + E4.Message);
+      logger.Error('Exception in PutFile ' + E4.ClassName + ' ' + E4.Message);
       Result := FS_FILE_READERROR;
     end;
     on E5: Exception do
     begin
-      Log('Exception in PutFile ' + E5.ClassName + ' ' + E5.Message);
+      logger.Error('Exception in PutFile ' + E5.ClassName + ' ' + E5.Message);
       Result := FS_FILE_READERROR;
     end;
   end;
@@ -598,12 +555,12 @@ begin
   oldFileName := normalizeDropboxPath(OldName);
   newFileName := normalizeDropboxPath(NewName);
   newFileExists := DropboxClient.exists(newFileName);
-  if not OverWrite and newFileExists then
+  if (not OverWrite and newFileExists) = True then
   begin
     Result := FS_FILE_EXISTS;
     exit;
   end;
-  if OverWrite and newFileExists then
+  if (OverWrite and newFileExists) = True then
     try
       DropboxClient.delete(newFileName);
     except
@@ -611,7 +568,7 @@ begin
       exit;
     end;
   try
-    if Move then
+    if Move = True then
     begin
       // move object
       json := DropboxClient.Move(oldFileName, newFileName);
@@ -627,7 +584,8 @@ begin
   except
     on E: Exception do
     begin
-      Log('Exception in FsRenMovFileW ' + E.ClassName + ' ' + E.Message);
+      logger.Error('Exception in FsRenMovFileW ' + E.ClassName + ' ' +
+        E.Message);
       Result := FS_FILE_WRITEERROR;
       exit;
     end;
@@ -732,6 +690,15 @@ begin
   // Hack to load ssl libs from custom path
   libeay32Handle := LoadLibrary(pwidechar(PluginPath + '\libeay32.dll'));
   ssleay32Handle := LoadLibrary(pwidechar(PluginPath + '\ssleay32.dll'));
+
+  // Logging
+  logLayout := TLogPatternLayout.Create('%r (%d) [%t] (%c) %p %x - %m%n');
+  logAppender := TLogRollingFileAppender.Create('Default', LogFullFilename,
+    logLayout);
+  logLayout.Options[DateFormatOpt] := 'dd-mm-yy hh:mm:ss';
+  TLogBasicConfigurator.Configure(logAppender);
+  TLogLogger.GetRootLogger.Level := All;
+  logger := TLogLogger.GetLogger('Default');
 
   // free LocalEncoding
 end.

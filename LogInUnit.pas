@@ -7,7 +7,7 @@ uses
   System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls,
   DropboxSession, OAuth, ShellApi, Vcl.ComCtrls, Vcl.Buttons, Vcl.ExtCtrls,
-  mycrypt, IdCoderMIME, AccessConfig;
+  mycrypt, IdCoderMIME, AccessConfig, Log4D;
 
 const
   SignatureString = 'TCBox1_';
@@ -40,7 +40,7 @@ type
   private
     { Private declarations }
     accessKeyFilename: string;
-
+    logger: TLogLogger;
     function saveKey(): boolean;
     function loadKey(): boolean;
     function deleteKey(): boolean;
@@ -73,13 +73,18 @@ begin
     PageControl1.ActivePageIndex := 1;
   except
     on E: Exception do
+    begin
       ShowMessage('Error: ' + E.Message);
+      logger.Error('Obtain request token ' + E.ClassName + ' ' + E.Message);
+    end;
+
   end;
 end;
 
 procedure TLogInForm.SignOutClick(Sender: TObject);
 begin
-  deleteKey();
+  if not deleteKey() then
+    logger.Debug('Key file not deleted');
   session.unlink();
   TabSheet1Show(self);
 end;
@@ -108,13 +113,22 @@ begin
     PageControl1.ActivePageIndex := 0;
     if session.isLinked() then
     begin
+      logger.Info('Accept token: Linked to dropbox');
       PageControl1.ActivePageIndex := 2;
     end
     else
+    begin
       PageControl1.ActivePageIndex := 0;
+      logger.Debug('Accept token: Not linked to Dropbox');
+    end;
+
   except
     on E: Exception do
+    begin
       ShowMessage('Error: ' + E.Message);
+      logger.Error('Accept token: error ' + E.ClassName + ' ' + E.Message);
+    end;
+
   end;
 
   // ModalResult :=  mrOk;
@@ -122,7 +136,8 @@ end;
 
 procedure TLogInForm.BitBtn1Click(Sender: TObject);
 begin
-  saveKey();
+  if not saveKey() then
+    logger.Debug('Key file not saved');
 end;
 
 procedure TLogInForm.CancelButtonClick(Sender: TObject);
@@ -134,17 +149,23 @@ constructor TLogInForm.Create(AOwner: TComponent; session: TDropboxSession;
   accessKeyFilename: string);
 begin
   inherited Create(AOwner);
+  logger := TLogLogger.GetLogger('Default');
   self.session := session;
   self.accessKeyFilename := accessKeyFilename;
-  loadKey();
+  if not loadKey() then
+    logger.Info('Key file not loaded');
 end;
 
 function TLogInForm.decrypt(data: string): string;
 var
   buf: string;
 begin
-  buf := TIdDecoderMIME.DecodeString(data);
-  Result := decryptstring(buf, KEYFILE_PASS);
+  try
+    buf := TIdDecoderMIME.DecodeString(data);
+    Result := decryptstring(buf, KEYFILE_PASS);
+  except
+    Result := '';
+  end;
 end;
 
 function TLogInForm.deleteKey: boolean;
@@ -157,8 +178,12 @@ function TLogInForm.encrypt(data: string): string;
 var
   buf: string;
 begin
-  buf := Cryptstring(data, KEYFILE_PASS);
-  Result := TIdEncoderMIME.EncodeString(buf);
+  try
+    buf := Cryptstring(data, KEYFILE_PASS);
+    Result := TIdEncoderMIME.EncodeString(buf);
+  except
+    Result := '';
+  end;
 end;
 
 procedure TLogInForm.EnterClick(Sender: TObject);
@@ -188,12 +213,13 @@ begin
     keyFileStream := TFileStream.Create(accessKeyFilename, fmOpenRead);
     stringStream := TStringStream.Create();
     try
-      stringStream.LoadFromStream(keyFileStream);;
+      stringStream.LoadFromStream(keyFileStream);
       bufString := stringStream.DataString;
       bufString := decrypt(bufString);
       // check signature
       if (pos(SignatureString, bufString) <> 1) then
       begin
+        logger.Debug('Key file signature incorrect');
         Result := False;
         exit;
       end;
