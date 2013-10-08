@@ -137,7 +137,8 @@ function ShowDllFormModal: boolean;
 var
   modal: TModalResult;
 begin
-  LogInForm := TLogInForm.Create(nil, DropboxSession, DropboxClient, AccessKeyFullFileName);
+  LogInForm := TLogInForm.Create(nil, DropboxSession, DropboxClient,
+    AccessKeyFullFileName);
   modal := LogInForm.ShowModal;
   if modal = mrOk then
     Result := True

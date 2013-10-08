@@ -26,13 +26,10 @@ type
     AcceptPageLabel: TLabel;
     EnterPageLabel: TLabel;
     Label1: TLabel;
-    ButtonsPageControl: TPageControl;
-    TabSheet4: TTabSheet;
-    TabSheet5: TTabSheet;
+    UserNameLabel: TLabel;
     Enter: TButton;
     SignOut: TButton;
     SignIn: TButton;
-    UserNameLabel: TLabel;
     constructor Create(AOwner: TComponent; session: TDropboxSession;
       client: TDropboxClient; accessKeyFilename: string);
     procedure SignOutClick(Sender: TObject);
@@ -40,7 +37,6 @@ type
     procedure EnterClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure AcceptButtonClick(Sender: TObject);
-    procedure CancelButtonClick(Sender: TObject);
     procedure TabSheet1Show(Sender: TObject);
     procedure BitBtn1Click(Sender: TObject);
   private
@@ -79,7 +75,7 @@ begin
     token := session.obtainRequestToken();
     url := session.buildAuthorizeUrl(token, '');
     ShellExecute(0, PChar('open'), PChar(url), Nil, Nil, SW_SHOW);
-    Sleep(3000);
+    Sleep(4000);
     PageControl1.ActivePageIndex := 1;
   except
     on E: Exception do
@@ -104,20 +100,27 @@ begin
   if session.isLinked() then
   begin
     // logged in
-    ButtonsPageControl.ActivePageIndex := 0;
+    UserNameLabel.Visible := True;
+    SignOut.Visible := True;
+    Enter.Visible := True;
+    SignIn.Visible := False;
+
     try
       UserNameLabel.Caption := getUserName();
     except
       on E: Exception do
       begin
         UserNameLabel.Caption := '';
-        logger.Debug('Cant get display name ' + E.ClassName+ E.Message);
+        logger.Debug('Cant get display name ' + E.ClassName + E.Message);
       end;
     end;
   end
   else
   begin
-    ButtonsPageControl.ActivePageIndex := 1;
+    UserNameLabel.Visible := False;
+    SignOut.Visible := False;
+    Enter.Visible := False;
+    SignIn.Visible := True;
     UserNameLabel.Caption := '';
   end;
 end;
@@ -126,7 +129,6 @@ procedure TLogInForm.AcceptButtonClick(Sender: TObject);
 begin
   try
     session.obtainAccessToken();
-    PageControl1.ActivePageIndex := 0;
     if session.isLinked() then
     begin
       logger.Info('Accept token: Linked to dropbox');
@@ -154,11 +156,6 @@ procedure TLogInForm.BitBtn1Click(Sender: TObject);
 begin
   if not saveKey() then
     logger.Debug('Key file not saved');
-end;
-
-procedure TLogInForm.CancelButtonClick(Sender: TObject);
-begin
-  PageControl1.ActivePageIndex := 0;
 end;
 
 constructor TLogInForm.Create(AOwner: TComponent; session: TDropboxSession;
@@ -216,8 +213,6 @@ begin
   begin
     PageControl1.Pages[page].TabVisible := False;
   end;
-  for page := 0 to ButtonsPageControl.PageCount - 1 do
-    ButtonsPageControl.Pages[page].TabVisible := False;
   PageControl1.ActivePageIndex := 0;
 end;
 
