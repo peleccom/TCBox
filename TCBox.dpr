@@ -66,6 +66,7 @@ var
   LogFullFilename: string;
   AccessKeyFullFileName: string;
   LocalEncoding: TEncoding;
+  LoginClosed: boolean;
 
   // SSL libs
   libeay32Handle, ssleay32Handle: THandle;
@@ -162,7 +163,9 @@ begin
   DropboxSession := TDropboxSession.Create(APP_KEY, APP_SECRET,
     TAccessType.dropbox);
   DropboxClient := TDropboxClient.Create(DropboxSession);
-  ShowDllFormModal();
+  LoginClosed := not ShowDllFormModal();
+  if LoginClosed then
+    DropboxSession.unlink();
   Result := 0;
 end;
 
@@ -184,15 +187,16 @@ var
   FindDatatmp: tWIN32FINDDATAW;
   PFindNextRec: ^TFindNextRecord;
 begin
-  if not DropboxSession.isLinked() then
+  if (not DropboxSession.isLinked()) and (not LoginClosed) then
   begin
     if not ShowDllFormModal() then
     begin
+      DropboxSession.unlink();
       Result := INVALID_HANDLE_VALUE;
       exit;
     end;
-
   end;
+  LoginClosed := False;
   Result := INVALID_HANDLE_VALUE;
   New(PFindNextRec);
   New(PFindNextRec.PList);
