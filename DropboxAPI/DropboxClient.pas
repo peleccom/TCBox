@@ -310,8 +310,8 @@ var
   params, requestparams, requestheaders: TStringList;
   url: string;
 begin
-  try
     params := TStringList.Create;
+  try
     requestparams := TStringList.Create;
     requestheaders := TStringList.Create;
     params.Values['root'] := FSession.Root;
@@ -399,10 +399,19 @@ end;
 function TDropboxClient.share(path: string): TJSONObject;
 var
   url: string;
+  params: TStringList;
+  headers: TStringList;
 begin
-  path := Format('/shares/%s%s', [Fsession.Root, format_path(path)]);
-  url := request(path, nil, 'POST' );
-  Result := FrestClient.POST_JSON(url);
+  params := TStringList.Create;
+  headers := TStringList.Create;
+  try
+    path := Format('/shares/%s%s', [Fsession.Root, format_path(path)]);
+    url := request(path, params, headers, nil, 'POST');
+    Result := FrestClient.POST_JSON(url,params)
+  finally
+    params.Free;
+    headers.Free;
+  end;
 end;
 
 function TDropboxClient.request(target: string;var requestparams, requestheaders: TStringList;
