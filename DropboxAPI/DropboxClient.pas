@@ -29,6 +29,8 @@ type
   function isFile(path: string): boolean;
   // Return True if path is existsting directory
   function isDir(path: string): boolean;
+  // Creates and returns a Dropbox link to files or folders users can use to view a preview of the file in a web browser.
+  function share(path: string): TJSONObject;
   procedure getFile(fromPath:string; stream: TStream; rev:string='';workbegin : TWorkEvent=nil; work : TWorkEvent=nil);
   function createFolder(path: string):boolean;
   // Delete file or folder. raise exception if fails
@@ -392,6 +394,15 @@ begin
 requestheaders := nil;
 requestparams := nil;
 Result:= request(target,requestparams,requestheaders,params,method,contentserver);
+end;
+
+function TDropboxClient.share(path: string): TJSONObject;
+var
+  url: string;
+begin
+  path := Format('/shares/%s%s', [Fsession.Root, format_path(path)]);
+  url := request(path, nil, 'POST' );
+  Result := FrestClient.POST_JSON(url);
 end;
 
 function TDropboxClient.request(target: string;var requestparams, requestheaders: TStringList;
