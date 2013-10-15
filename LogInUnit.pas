@@ -23,6 +23,10 @@ const
 
   // * TABS_INDEXES *
 
+  ENTER_TAB = 0;
+  CONFITM_TAB = 1;
+  CONNECTED_TAB = 2;
+
   //
 
 type
@@ -91,7 +95,7 @@ begin
     url := session.buildAuthorizeUrl(token, '');
     ShellExecute(0, PChar('open'), PChar(url), Nil, Nil, SW_SHOW);
     Sleep(BROWSER_OPEN_TIMEOUT);
-    PageControl1.ActivePageIndex := 1;
+    PageControl1.ActivePageIndex := CONFITM_TAB;
     // start a timer
     checkAccessTokenTimer.Interval := CHECK_ACCESS_TOKEN_INTERVAl;
     checkAccessTokenTimerCount := 0;
@@ -150,11 +154,11 @@ begin
     if session.isLinked() then
     begin
       logger.Info('Accept token: Linked to dropbox');
-      PageControl1.ActivePageIndex := 2;
+      PageControl1.ActivePageIndex := CONNECTED_TAB;
     end
     else
     begin
-      PageControl1.ActivePageIndex := 0;
+      PageControl1.ActivePageIndex := ENTER_TAB;
       logger.Debug('Accept token: Not linked to Dropbox');
     end;
 
@@ -178,7 +182,7 @@ end;
 
 procedure TLogInForm.checkAccessTokenTimerTimer(Sender: TObject);
 begin
-  checkAccessTokenTimerCount:= checkAccessTokenTimerCount + 1;
+  checkAccessTokenTimerCount := checkAccessTokenTimerCount + 1;
   if checkAccessTokenTimerCount > CHECK_ACCESS_TOKEN_MAX_COUNT then
   begin
     checkAccessTokenTimer.Enabled := False;
@@ -191,7 +195,7 @@ begin
     if session.isLinked() then
     begin
       checkAccessTokenTimer.Enabled := False;
-      PageControl1.ActivePageIndex := 2;
+      PageControl1.ActivePageIndex := CONNECTED_TAB;
     end;
   except
     on E: ErrorResponse do
@@ -267,13 +271,13 @@ end;
 
 procedure TLogInForm.FormCreate(Sender: TObject);
 var
-  page: Integer;
+  page: integer;
 begin
   for page := 0 to PageControl1.PageCount - 1 do
   begin
     PageControl1.Pages[page].TabVisible := False;
   end;
-  PageControl1.ActivePageIndex := 0;
+  PageControl1.ActivePageIndex := ENTER_TAB;
   EnterPageLabel.Caption := PLUGIN_HELLO_TITLE;
 end;
 
