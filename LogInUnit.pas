@@ -102,11 +102,20 @@ procedure TLogInForm.SignInClick(Sender: TObject);
 var
   token: TOAuthToken;
   url: string;
+  shellResult: HINST;
 begin
   try
     token := session.obtainRequestToken();
     url := session.buildAuthorizeUrl(token, '');
-    ShellExecute(0, PChar('open'), PChar(url), Nil, Nil, SW_SHOW);
+    shellResult := ShellExecute(0, PChar('open'), PChar(url), Nil, Nil,
+      SW_SHOW);
+    if shellResult <= 32 then // ShellExecute fails
+    begin
+      logger.Warn('SignIn: Opening browser failed. Received error code ' +
+        InttoStr(shellResult));
+      InputBox('Не удалось запустить браузер по умолчанию',
+        'Перейдите пожалуйста по этой ссылке в вашем браузере:', url);
+    end;
     SignIn.Enabled := False;
     OpenBrowserTimer.Interval := BROWSER_OPEN_TIMEOUT;
     OpenBrowserTimer.Enabled := True;
