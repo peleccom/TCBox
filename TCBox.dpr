@@ -1,5 +1,11 @@
 ﻿library TCBox;
 
+
+
+
+
+{$R *.dres}
+
 uses
   Windows,
   Vcl.Dialogs,
@@ -27,7 +33,6 @@ uses
 // httpGet in 'httpGet.pas';
 
 {$E wfx}
-{$R icon.res}
 {$R *.RES}
 
 type
