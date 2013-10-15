@@ -9,7 +9,7 @@ uses
   DropboxClient, DropboxSession, Vcl.Buttons, Vcl.ComCtrls, OAuth, ShellApi,
   Vcl.ExtCtrls,
   mycrypt, IdCoderMIME, AccessConfig, Log4D, Data.DBxjson, PluginConsts,
-  DropboxRest;
+  DropboxRest, Vcl.Imaging.GIFImg;
 
 const
   // * TIMEOUTS *
@@ -21,11 +21,11 @@ const
   // maximum counts of checkAccessKey timer calls
   CHECK_ACCESS_TOKEN_MAX_COUNT = 60; // 5 min
 
-  // * TABS_INDEXES *
+  // * PAGE_INDEXES *
 
-  ENTER_TAB = 0;
-  CONFITM_TAB = 1;
-  CONNECTED_TAB = 2;
+  ENTER_PAGE = 0;
+  CONFITM_PAGE = 1;
+  CONNECTED_PAGE = 2;
 
   //
 
@@ -47,6 +47,8 @@ type
     SignOut: TButton;
     SignIn: TButton;
     checkAccessTokenTimer: TTimer;
+    SpinnerImage: TImage;
+    OpenBrowserTimer: TTimer;
     constructor Create(AOwner: TComponent; session: TDropboxSession;
       client: TDropboxClient; accessKeyFilename: string);
     procedure SignOutClick(Sender: TObject);
@@ -57,6 +59,8 @@ type
     procedure TabSheet1Show(Sender: TObject);
     procedure BitBtn1Click(Sender: TObject);
     procedure checkAccessTokenTimerTimer(Sender: TObject);
+    procedure CancelButtonClick(Sender: TObject);
+    procedure OpenBrowserTimerTimer(Sender: TObject);
   private
     { Private declarations }
     accessKeyFilename: string;
@@ -72,6 +76,15 @@ type
 
     // helper client functions
     function getUserName(): string;
+
+    // load gif image to spinner
+    procedure loadSpinnerGif();
+
+    // start accessTokenTimer and set UI
+    procedure startCheckAccessTokenTimer();
+    // stop accessTokenTimer and set UI
+    procedure stopCheckAccessTokenTimer();
+
   public
     session: TDropboxSession;
     client: TDropboxClient;
@@ -94,12 +107,9 @@ begin
     token := session.obtainRequestToken();
     url := session.buildAuthorizeUrl(token, '');
     ShellExecute(0, PChar('open'), PChar(url), Nil, Nil, SW_SHOW);
-    Sleep(BROWSER_OPEN_TIMEOUT);
-    PageControl1.ActivePageIndex := CONFITM_TAB;
-    // start a timer
-    checkAccessTokenTimer.Interval := CHECK_ACCESS_TOKEN_INTERVAl;
-    checkAccessTokenTimerCount := 0;
-    checkAccessTokenTimer.Enabled := True;
+    SignIn.Enabled := False;
+    OpenBrowserTimer.Interval := BROWSER_OPEN_TIMEOUT;
+    OpenBrowserTimer.Enabled := True;
   except
     on E: Exception do
     begin
@@ -115,6 +125,26 @@ begin
     logger.Debug('Key file not deleted');
   session.unlink();
   TabSheet1Show(self);
+end;
+
+procedure TLogInForm.startCheckAccessTokenTimer;
+begin
+  SpinnerImage.Visible := True;
+  AcceptButton.Visible := False;
+  AcceptPageLabel.Caption := 'Подтвердите доступ приложению в вашем браузере';
+  // start a timer
+  checkAccessTokenTimer.Interval := CHECK_ACCESS_TOKEN_INTERVAl;
+  checkAccessTokenTimerCount := 0;
+  checkAccessTokenTimer.Enabled := True;
+end;
+
+procedure TLogInForm.stopCheckAccessTokenTimer;
+begin
+  SpinnerImage.Visible := False;
+  checkAccessTokenTimer.Enabled := False;
+  AcceptButton.Visible := True;
+  AcceptPageLabel.Caption := 'Подтвердите доступ приложению в вашем браузере ' +
+    'и после этого нажмите кнопку `Принять`';
 end;
 
 procedure TLogInForm.TabSheet1Show(Sender: TObject);
@@ -154,11 +184,13 @@ begin
     if session.isLinked() then
     begin
       logger.Info('Accept token: Linked to dropbox');
-      PageControl1.ActivePageIndex := CONNECTED_TAB;
+      stopCheckAccessTokenTimer();
+      PageControl1.ActivePageIndex := CONNECTED_PAGE;
     end
     else
     begin
-      PageControl1.ActivePageIndex := ENTER_TAB;
+      stopCheckAccessTokenTimer();
+      PageControl1.ActivePageIndex := ENTER_PAGE;
       logger.Debug('Accept token: Not linked to Dropbox');
     end;
 
@@ -180,12 +212,19 @@ begin
     logger.Debug('Key file not saved');
 end;
 
+procedure TLogInForm.CancelButtonClick(Sender: TObject);
+begin
+  stopCheckAccessTokenTimer();
+  PageControl1.ActivePageIndex := ENTER_PAGE;
+end;
+
 procedure TLogInForm.checkAccessTokenTimerTimer(Sender: TObject);
 begin
+  // Beep();
   checkAccessTokenTimerCount := checkAccessTokenTimerCount + 1;
   if checkAccessTokenTimerCount > CHECK_ACCESS_TOKEN_MAX_COUNT then
   begin
-    checkAccessTokenTimer.Enabled := False;
+    stopCheckAccessTokenTimer();
     logger.Debug('CheckAccessTokenTimer error - maximum repeat count achieved');
     exit;
   end;
@@ -194,8 +233,8 @@ begin
     session.obtainAccessToken();
     if session.isLinked() then
     begin
-      checkAccessTokenTimer.Enabled := False;
-      PageControl1.ActivePageIndex := CONNECTED_TAB;
+      stopCheckAccessTokenTimer();
+      PageControl1.ActivePageIndex := CONNECTED_PAGE;
     end;
   except
     on E: ErrorResponse do
@@ -209,14 +248,14 @@ begin
       begin
         logger.Debug('CheckAccessTokenTimer error: ' + E.ClassName + ' ' +
           E.Message);
-        checkAccessTokenTimer.Enabled := False;
+        stopCheckAccessTokenTimer();
       end;
     end;
     on E1: Exception do
     begin
       logger.Debug('CheckAccessTokenTimer error: ' + E1.ClassName + ' ' +
         E1.Message);
-      checkAccessTokenTimer.Enabled := False;
+      stopCheckAccessTokenTimer();
     end;
   end;
 
@@ -272,13 +311,15 @@ end;
 procedure TLogInForm.FormCreate(Sender: TObject);
 var
   page: integer;
+  gifStream: TResourceStream;
 begin
   for page := 0 to PageControl1.PageCount - 1 do
   begin
     PageControl1.Pages[page].TabVisible := False;
   end;
-  PageControl1.ActivePageIndex := ENTER_TAB;
+  PageControl1.ActivePageIndex := ENTER_PAGE;
   EnterPageLabel.Caption := PLUGIN_HELLO_TITLE;
+  loadSpinnerGif();
 end;
 
 function TLogInForm.getUserName: string;
@@ -328,6 +369,34 @@ begin
   except
     Result := False;
   end;
+end;
+
+procedure TLogInForm.loadSpinnerGif;
+var
+  gifStream: TResourceStream;
+  gif: TGIFImage;
+begin
+  gifStream := TResourceStream.Create(HInstance, 'spin_loader', RT_RCDATA);
+  gif := TGIFImage.Create;
+  try
+    gif.LoadFromStream(gifStream);
+    SpinnerImage.Picture.Assign(gif);
+    (SpinnerImage.Picture.Graphic as TGIFImage).Animate := True;
+    // gets it goin'
+    // ( Image1.Picture.Graphic as TGIFImage ).AnimationSpeed:= 500;// adjust your speed
+    DoubleBuffered := True; // stops flickering
+  finally
+    gif.Free;
+    gifStream.Free;
+  end;
+end;
+
+procedure TLogInForm.OpenBrowserTimerTimer(Sender: TObject);
+begin
+  OpenBrowserTimer.Enabled := False;
+  startCheckAccessTokenTimer();
+  PageControl1.ActivePageIndex := CONFITM_PAGE;
+  SignIn.Enabled := True;
 end;
 
 function TLogInForm.saveKey: boolean;

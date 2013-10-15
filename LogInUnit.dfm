@@ -118,33 +118,42 @@ object LogInForm: TLogInForm
         Left = 0
         Top = 0
         Width = 236
-        Height = 26
+        Height = 13
         Align = alTop
         Alignment = taCenter
-        Caption = 
-          #1055#1086#1076#1090#1074#1077#1088#1076#1080#1090#1077' '#1076#1086#1089#1090#1091#1087' '#1087#1088#1080#1083#1086#1078#1077#1085#1080#1102' '#1074' '#1073#1088#1072#1091#1079#1077#1088#1077' '#1080' '#1079#1072#1090#1077#1084' '#1085#1072#1078#1084#1080#1090#1077' '#39#1055#1088#1080#1085#1103#1090 +
-          #1100#39
+        Caption = 'AcceptPageLabel Text'
         WordWrap = True
-        ExplicitWidth = 235
+        ExplicitWidth = 107
+      end
+      object SpinnerImage: TImage
+        Left = 88
+        Top = 56
+        Width = 64
+        Height = 64
+        Center = True
+        Stretch = True
+        Transparent = True
       end
       object AcceptButton: TButton
         Left = 3
-        Top = 72
+        Top = 139
         Width = 102
         Height = 28
         Anchors = []
         Caption = #1055#1088#1080#1085#1103#1090#1100
         TabOrder = 0
+        Visible = False
         OnClick = AcceptButtonClick
       end
       object CancelButton: TButton
         Left = 131
-        Top = 72
+        Top = 139
         Width = 102
         Height = 28
         Anchors = []
-        Caption = #1054#1090#1082#1083#1086#1085#1080#1090#1100
+        Caption = #1053#1072#1079#1072#1076
         TabOrder = 1
+        OnClick = CancelButtonClick
       end
     end
     object TabSheet3: TTabSheet
@@ -178,5 +187,10 @@ object LogInForm: TLogInForm
     Enabled = False
     OnTimer = checkAccessTokenTimerTimer
     Top = 168
+  end
+  object OpenBrowserTimer: TTimer
+    Enabled = False
+    OnTimer = OpenBrowserTimerTimer
+    Top = 136
   end
 end
