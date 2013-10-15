@@ -85,6 +85,7 @@
 			</DCCReference>
 			<DCCReference Include="mycrypt.pas"/>
 			<DCCReference Include="Log4D.pas"/>
+			<DCCReference Include="PluginConsts.pas"/>
 			<None Include="TCBox.todo"/>
 			<BuildConfiguration Include="Debug">
 				<Key>Cfg_2</Key>

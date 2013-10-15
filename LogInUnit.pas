@@ -8,11 +8,7 @@ uses
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls,
   DropboxClient, DropboxSession, Vcl.Buttons, Vcl.ComCtrls, OAuth, ShellApi,
   Vcl.ExtCtrls,
-  mycrypt, IdCoderMIME, AccessConfig, Log4D, Data.DBxjson;
-
-const
-  SignatureString = 'TCBox1_';
-
+  mycrypt, IdCoderMIME, AccessConfig, Log4D, Data.DBxjson, PluginConsts;
 type
   TLogInForm = class(TForm)
     PageControl1: TPageControl;
@@ -214,6 +210,7 @@ begin
     PageControl1.Pages[page].TabVisible := False;
   end;
   PageControl1.ActivePageIndex := 0;
+  EnterPageLabel.Caption := PLUGIN_HELLO_TITLE;
 end;
 
 function TLogInForm.getUserName: string;
@@ -243,15 +240,15 @@ begin
       bufString := stringStream.DataString;
       bufString := decrypt(bufString);
       // check signature
-      if (pos(SignatureString, bufString) <> 1) then
+      if (pos(ACESS_KEY_SIGNATURE_STRING, bufString) <> 1) then
       begin
         logger.Debug('Key file signature incorrect');
         Result := False;
         exit;
       end;
       // delete signature
-      bufString := Copy(bufString, Length(SignatureString) + 1,
-        Length(bufString) - Length(SignatureString));
+      bufString := Copy(bufString, Length(ACESS_KEY_SIGNATURE_STRING) + 1,
+        Length(bufString) - Length(ACESS_KEY_SIGNATURE_STRING));
       stringStream.Clear;
       stringStream.WriteString(bufString);
       stringStream.Seek(0, soFromBeginning);
@@ -279,7 +276,7 @@ begin
     try
       session.SaveAccessToken(stringStream);
       bufString := stringStream.DataString;
-      bufString := encrypt(SignatureString + bufString);
+      bufString := encrypt(ACESS_KEY_SIGNATURE_STRING + bufString);
       stringStream.Clear;
       stringStream.WriteString(bufString);
       stringStream.SaveToStream(keyFileStream);

@@ -19,25 +19,16 @@ uses
   DropboxSession in '..\DropboxAPI\DropboxSession.pas',
   OAuth in '..\DropboxAPI\OAuth.pas',
   iso8601Unit in '..\DropboxAPI\iso8601Unit.pas',
-  LogInUnit in 'LogInUnit.pas' {LogInForm} ,
+  LogInUnit in 'LogInUnit.pas' {LogInForm},
   mycrypt in 'mycrypt.pas',
-  Log4D in 'Log4D.pas';
+  Log4D in 'Log4D.pas',
+  PluginConsts in 'PluginConsts.pas';
 
 // httpGet in 'httpGet.pas';
 
 {$E wfx}
 {$R icon.res}
 {$R *.RES}
-
-const
-  VERSION_TEXT = '1.0beta';
-  PLUGIN_TITLE = 'Total Commander Dropbox plugin';
-  HELLO_TITLE = 'TCBox ' + VERSION_TEXT;
-  ACCESS_KEY_FILENAME = 'key.txt';
-  LOG_FILENAME = 'TCBOX.log';
-  MAX_LOG_SIZE = 20 * 1024;
-
-  REQUES_TOKEN_HANDLER = 10;
 
 type
   PJsonArrayEnumerator = ^TJSONArrayEnumerator;
@@ -676,8 +667,8 @@ end;
 
 begin
   PluginPath := ExtractFilePath(GetPluginFileName());
-  LogFullFilename := PluginPath + LOG_FILENAME;
-  AccessKeyFullFileName := PluginPath + ACCESS_KEY_FILENAME;
+  LogFullFilename := PluginPath + PLUGIN_LOG_FILENAME;
+  AccessKeyFullFileName := PluginPath + PLUGIN_ACCESS_KEY_FILENAME;
   LocalEncoding := TEncoding.GetEncoding(GetACP());
   DLLProc := @MyDLLProc;
 
