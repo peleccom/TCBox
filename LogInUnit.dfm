@@ -31,8 +31,6 @@ object LogInForm: TLogInForm
       Caption = 'TabSheet1'
       TabVisible = False
       OnShow = TabSheet1Show
-      ExplicitLeft = 8
-      ExplicitTop = 10
       DesignSize = (
         236
         184)
@@ -45,8 +43,7 @@ object LogInForm: TLogInForm
         Alignment = taCenter
         Caption = 'Total Commander Dropbox plugin'
         WordWrap = True
-        ExplicitLeft = 3
-        ExplicitTop = -6
+        ExplicitWidth = 159
       end
       object Label1: TLabel
         Left = 0
@@ -56,7 +53,6 @@ object LogInForm: TLogInForm
         Align = alTop
         Alignment = taRightJustify
         ExplicitLeft = 233
-        ExplicitTop = 13
         ExplicitWidth = 3
       end
       object UserNameLabel: TLabel
@@ -177,5 +173,10 @@ object LogInForm: TLogInForm
         OnClick = BitBtn1Click
       end
     end
+  end
+  object checkAccessTokenTimer: TTimer
+    Enabled = False
+    OnTimer = checkAccessTokenTimerTimer
+    Top = 168
   end
 end

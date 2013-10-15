@@ -8,7 +8,23 @@ uses
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls,
   DropboxClient, DropboxSession, Vcl.Buttons, Vcl.ComCtrls, OAuth, ShellApi,
   Vcl.ExtCtrls,
-  mycrypt, IdCoderMIME, AccessConfig, Log4D, Data.DBxjson, PluginConsts;
+  mycrypt, IdCoderMIME, AccessConfig, Log4D, Data.DBxjson, PluginConsts,
+  DropboxRest;
+
+const
+  // * TIMEOUTS *
+
+  // open a browser and wait msec
+  BROWSER_OPEN_TIMEOUT = 5000;
+  // checks access key every msec
+  CHECK_ACCESS_TOKEN_INTERVAl = 5000;
+  // maximum counts of checkAccessKey timer calls
+  CHECK_ACCESS_TOKEN_MAX_COUNT = 60; // 5 min
+
+  // * TABS_INDEXES *
+
+  //
+
 type
   TLogInForm = class(TForm)
     PageControl1: TPageControl;
@@ -26,6 +42,7 @@ type
     Enter: TButton;
     SignOut: TButton;
     SignIn: TButton;
+    checkAccessTokenTimer: TTimer;
     constructor Create(AOwner: TComponent; session: TDropboxSession;
       client: TDropboxClient; accessKeyFilename: string);
     procedure SignOutClick(Sender: TObject);
@@ -35,10 +52,12 @@ type
     procedure AcceptButtonClick(Sender: TObject);
     procedure TabSheet1Show(Sender: TObject);
     procedure BitBtn1Click(Sender: TObject);
+    procedure checkAccessTokenTimerTimer(Sender: TObject);
   private
     { Private declarations }
     accessKeyFilename: string;
     logger: TLogLogger;
+    checkAccessTokenTimerCount: integer;
     function saveKey(): boolean;
     function loadKey(): boolean;
     function deleteKey(): boolean;
@@ -71,15 +90,18 @@ begin
     token := session.obtainRequestToken();
     url := session.buildAuthorizeUrl(token, '');
     ShellExecute(0, PChar('open'), PChar(url), Nil, Nil, SW_SHOW);
-    Sleep(4000);
+    Sleep(BROWSER_OPEN_TIMEOUT);
     PageControl1.ActivePageIndex := 1;
+    // start a timer
+    checkAccessTokenTimer.Interval := CHECK_ACCESS_TOKEN_INTERVAl;
+    checkAccessTokenTimerCount := 0;
+    checkAccessTokenTimer.Enabled := True;
   except
     on E: Exception do
     begin
       ShowMessage('Error: ' + E.Message);
       logger.Error('Obtain request token ' + E.ClassName + ' ' + E.Message);
     end;
-
   end;
 end;
 
@@ -152,6 +174,48 @@ procedure TLogInForm.BitBtn1Click(Sender: TObject);
 begin
   if not saveKey() then
     logger.Debug('Key file not saved');
+end;
+
+procedure TLogInForm.checkAccessTokenTimerTimer(Sender: TObject);
+begin
+  checkAccessTokenTimerCount:= checkAccessTokenTimerCount + 1;
+  if checkAccessTokenTimerCount > CHECK_ACCESS_TOKEN_MAX_COUNT then
+  begin
+    checkAccessTokenTimer.Enabled := False;
+    logger.Debug('CheckAccessTokenTimer error - maximum repeat count achieved');
+    exit;
+  end;
+
+  try
+    session.obtainAccessToken();
+    if session.isLinked() then
+    begin
+      checkAccessTokenTimer.Enabled := False;
+      PageControl1.ActivePageIndex := 2;
+    end;
+  except
+    on E: ErrorResponse do
+    begin
+      if E.Code = 401 then
+      begin
+        // Not yet , wait until next OnTimer
+        exit;
+      end
+      else
+      begin
+        logger.Debug('CheckAccessTokenTimer error: ' + E.ClassName + ' ' +
+          E.Message);
+        checkAccessTokenTimer.Enabled := False;
+      end;
+    end;
+    on E1: Exception do
+    begin
+      logger.Debug('CheckAccessTokenTimer error: ' + E1.ClassName + ' ' +
+        E1.Message);
+      checkAccessTokenTimer.Enabled := False;
+    end;
+  end;
+
 end;
 
 constructor TLogInForm.Create(AOwner: TComponent; session: TDropboxSession;
