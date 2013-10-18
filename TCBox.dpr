@@ -28,7 +28,8 @@ uses
   LogInUnit in 'LogInUnit.pas' {LogInForm},
   mycrypt in 'mycrypt.pas',
   Log4D in 'Log4D.pas',
-  PluginConsts in 'PluginConsts.pas';
+  PluginConsts in 'PluginConsts.pas',
+  settings in 'settings.pas';
 
 // httpGet in 'httpGet.pas';
 
@@ -150,7 +151,11 @@ function FsInitW(PluginNr: Integer; pProgressProcW: tProgressProcW;
 var
   token: TOAuthToken;
   url: string;
+  settings : TSettings;
 begin
+  settings := TSettings.Create();
+  settings.load(PluginPath + PLUGIN_SETTINGS_FILENAME);
+  settings.Free;
   ProgressProc := pProgressProcW;
   LogProc := pLogProcW;
   RequestProc := pRequestProcW;

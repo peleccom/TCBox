@@ -11,6 +11,7 @@ const
   ACESS_KEY_SIGNATURE_STRING = 'TCBox1_';
   PLUGIN_ACCESS_KEY_FILENAME = 'key.txt';
   PLUGIN_LOG_FILENAME = 'TCBOX.log';
+  PLUGIN_SETTINGS_FILENAME = 'settings.ini';
 
 implementation
 
