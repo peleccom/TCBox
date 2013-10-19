@@ -12,6 +12,7 @@ const
   PLUGIN_ACCESS_KEY_FILENAME = 'key.txt';
   PLUGIN_LOG_FILENAME = 'TCBOX.log';
   PLUGIN_SETTINGS_FILENAME = 'settings.ini';
+  PLUGIN_LANGUAGE_CODES_PATH = 'locale\languagecodes.mo';
 
 resourcestring
   PLUGIN_TITLE = 'Total Commander Dropbox plugin';

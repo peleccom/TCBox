@@ -70,8 +70,6 @@ begin
   languages.Clear;
   DefaultInstance.GetListOfLanguages('default', languages);
   LanguagesComboBox.Items.Assign(languages);
-  DefaultInstance.BindtextdomainToFile('languagecodes',
-    'c:\tmp\' + 'languagecodes.mo');
   DefaultInstance.TranslateProperties(LanguagesComboBox, 'languagecodes');
   DefaultInstance.TranslateProperties(LanguagesComboBox, 'languagenames');
   LanguagesComboBox.ItemIndex := languages.IndexOf(GetCurrentLanguage);

@@ -21,13 +21,13 @@ uses
   DropboxSession in '..\DropboxAPI\DropboxSession.pas',
   OAuth in '..\DropboxAPI\OAuth.pas',
   iso8601Unit in '..\DropboxAPI\iso8601Unit.pas',
-  LogInUnit in 'LogInUnit.pas' {LogInForm},
+  LogInUnit in 'LogInUnit.pas' {LogInForm} ,
   mycrypt in 'mycrypt.pas',
   Log4D in 'Log4D.pas',
   PluginConsts in 'PluginConsts.pas',
   settings in 'settings.pas',
   gnugettext in 'gnugettext.pas',
-  SettingUnit in 'SettingUnit.pas' {SettingsForm},
+  SettingUnit in 'SettingUnit.pas' {SettingsForm} ,
   UserLogin in 'UserLogin.pas';
 
 // httpGet in 'httpGet.pas';
@@ -135,10 +135,10 @@ var
   modal: TModalResult;
 begin
   if TUserLogin.loadKey(AccessKeyFullFileName, DropboxSession) then
-    begin
-      Result := True;
-      Exit;
-    end;
+  begin
+    Result := True;
+    Exit;
+  end;
   logger.Info('Key file not loaded');
   LogInForm := TLogInForm.Create(nil, DropboxSession, DropboxClient,
     AccessKeyFullFileName);
@@ -154,10 +154,9 @@ function showSettingsForm(): boolean;
 var
   form: TSettingsForm;
 begin
-  form := TSettingsForm.Create(nil, DropboxSession,
-    AccessKeyFullFileName);
- form.ShowModal();
- form.Free;
+  form := TSettingsForm.Create(nil, DropboxSession, AccessKeyFullFileName);
+  form.ShowModal();
+  form.Free;
 end;
 
 function FsInitW(PluginNr: Integer; pProgressProcW: tProgressProcW;
@@ -204,7 +203,7 @@ begin
     begin
       DropboxSession.unlink();
       Result := INVALID_HANDLE_VALUE;
-      exit;
+      Exit;
     end;
   end;
   LoginClosed := False;
@@ -229,7 +228,7 @@ begin
       FindData := PFindNextRec.PList.Items[0];
       PFindNextRec.index := 1;
       Result := THandle(PFindNextRec);
-      exit();
+      Exit();
     end
     else
     begin
@@ -324,14 +323,14 @@ begin
     FileExists(LocalName) then
   begin
     Result := FS_FILE_EXISTS;
-    exit;
+    Exit;
   end;
   filemode := fmCreate;
   if (CopyFlags and FS_COPYFLAGS_RESUME) <> 0 then
   // Resume not supported
   begin
     Result := FS_FILE_NOTSUPPORTED;
-    exit;
+    Exit;
   end;
   fs := nil;
   handler := nil;
@@ -341,7 +340,7 @@ begin
       then
       begin
         Result := FS_FILE_NOTSUPPORTED;
-        exit;
+        Exit;
       end;
       fs := TFileStream.Create(LocalName, filemode);
       handler := TDownloadEventHandler.Create(remotefilename, LocalName);
@@ -353,7 +352,7 @@ begin
         FreeAndNil(fs);
         DeleteFile(LocalName);
         Result := FS_FILE_USERABORT;
-        exit;
+        Exit;
       end
       else
       begin
@@ -368,7 +367,7 @@ begin
               logger.Error('Exception in GetFile(delete remote file) ' +
                 E.ClassName + ' ' + E.Message);
               Result := FS_FILE_NOTSUPPORTED;
-              exit;
+              Exit;
             end;
           end;
 
@@ -470,12 +469,12 @@ begin
     DropboxClient.exists(remotefilename)) then
   begin
     Result := FS_FILE_EXISTS;
-    exit;
+    Exit;
   end;
   if (CopyFlags and FS_COPYFLAGS_RESUME) <> 0 then
   begin
     Result := FS_FILE_NOTSUPPORTED;
-    exit;
+    Exit;
   end;
   if (CopyFlags and FS_COPYFLAGS_OVERWRITE) <> 0 then
     // delete file
@@ -487,7 +486,7 @@ begin
         logger.Error('Exception in PUTFile(delete remote file) ' + E.ClassName +
           ' ' + E.Message);
         Result := FS_FILE_NOTSUPPORTED;
-        exit;
+        Exit;
       end;
     end;
   fs := nil;
@@ -503,7 +502,7 @@ begin
         // close filestream and delete file
         fs.Free;
         Result := FS_FILE_USERABORT;
-        exit;
+        Exit;
       end
       else
       begin
@@ -511,7 +510,7 @@ begin
         Result := FS_FILE_OK;
         if (CopyFlags and FS_COPYFLAGS_MOVE) <> 0 then
           DeleteFile(LocalName);
-        exit;
+        Exit;
       end;
 
     finally
@@ -563,14 +562,14 @@ begin
   if (not OverWrite and newFileExists) = True then
   begin
     Result := FS_FILE_EXISTS;
-    exit;
+    Exit;
   end;
   if (OverWrite and newFileExists) = True then
     try
       DropboxClient.delete(newFileName);
     except
       Result := FS_FILE_NOTSUPPORTED;
-      exit;
+      Exit;
     end;
   try
     if Move = True then
@@ -592,7 +591,7 @@ begin
       logger.Error('Exception in FsRenMovFileW ' + E.ClassName + ' ' +
         E.Message);
       Result := FS_FILE_WRITEERROR;
-      exit;
+      Exit;
     end;
   end;
 end;
@@ -609,8 +608,8 @@ function FsExecuteFileW(MainWin: THandle; RemoteName, Verb: pwidechar)
 begin
   if (RemoteName = '\') and (Verb = 'properties') then
   begin
-   // ShowDllFormModal;
-   showSettingsForm();
+    // ShowDllFormModal;
+    showSettingsForm();
   end;
   Result := FS_EXEC_OK;
 end;
@@ -710,5 +709,9 @@ begin
   settingfilename := PluginPath + PLUGIN_SETTINGS_FILENAME;
   GetSettings().load();
   UseLanguage(GetSettings().getLangStr());
+  DefaultInstance.BindtextdomainToFile('languagecodes',
+
+    PluginPath + PLUGIN_LANGUAGE_CODES_PATH);
+
   // free LocalEncoding
 end.
