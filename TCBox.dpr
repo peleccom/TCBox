@@ -566,10 +566,15 @@ begin
   end;
   if (OverWrite and newFileExists) = True then
     try
-      DropboxClient.delete(newFileName);
-    except
-      Result := FS_FILE_NOTSUPPORTED;
-      Exit;
+      try
+        ProgressProc(PluginNumber, OldName, NewName, 0);
+        DropboxClient.delete(newFileName);
+      except
+        Result := FS_FILE_NOTSUPPORTED;
+        Exit;
+      end;
+    finally
+      ProgressProc(PluginNumber, OldName, NewName, 100);
     end;
   try
     if Move = True then
