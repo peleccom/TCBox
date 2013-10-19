@@ -11,6 +11,7 @@ type
     procedure load();
     procedure save();
     function getLangStr(): string;
+    procedure setLangStr(lang: string);
   private
     langStr: string;
   end;
@@ -47,15 +48,29 @@ var
 begin
   ini := TMemIniFile.Create(settingfilename, TEncoding.UTF8);
   try
-      langStr := ini.ReadString('Options', 'LANG', '');
+    langStr := ini.ReadString('Options', 'LANG', '');
   finally
     ini.Free;
   end;
 end;
 
 procedure TSettings.save();
+var
+  ini: TMemIniFile;
 begin
-  //
+  ini := TMemIniFile.Create(settingfilename, TEncoding.UTF8);
+  try
+    ini.WriteString('Options', 'LANG', langStr);
+    ini.UpdateFile();
+  finally
+    ini.Free;
+  end;
+end;
+
+procedure TSettings.setLangStr(lang: string);
+begin
+  langStr :=  lang;
+  save();
 end;
 
 initialization

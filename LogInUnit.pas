@@ -339,6 +339,7 @@ begin
   EnterPageLabel.Caption := getPluginHelloTitle();
   loadSpinnerGif();
   loadFormIcon();
+  Caption := PLUGIN_TITLE_SHORT +' ' + _('Login');
 end;
 
 function TLogInForm.getUserName: string;

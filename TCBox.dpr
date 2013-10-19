@@ -21,12 +21,13 @@ uses
   DropboxSession in '..\DropboxAPI\DropboxSession.pas',
   OAuth in '..\DropboxAPI\OAuth.pas',
   iso8601Unit in '..\DropboxAPI\iso8601Unit.pas',
-  LogInUnit in 'LogInUnit.pas' {LogInForm} ,
+  LogInUnit in 'LogInUnit.pas' {LogInForm},
   mycrypt in 'mycrypt.pas',
   Log4D in 'Log4D.pas',
   PluginConsts in 'PluginConsts.pas',
   settings in 'settings.pas',
-  gnugettext in 'gnugettext.pas';
+  gnugettext in 'gnugettext.pas',
+  SettingUnit in 'SettingUnit.pas' {SettingsForm};
 
 // httpGet in 'httpGet.pas';
 
@@ -140,6 +141,15 @@ begin
   else
     Result := False;
   LogInForm.Free;
+end;
+
+function showSettingsForm(): boolean;
+var
+  form: TSettingsForm;
+begin
+  form := TSettingsForm.Create(nil);
+ form.ShowModal();
+ form.Free;
 end;
 
 function FsInitW(PluginNr: Integer; pProgressProcW: tProgressProcW;
@@ -592,7 +602,8 @@ function FsExecuteFileW(MainWin: THandle; RemoteName, Verb: pwidechar)
 begin
   if (RemoteName = '\') and (Verb = 'properties') then
   begin
-    ShowDllFormModal;
+   // ShowDllFormModal;
+   showSettingsForm();
   end;
   Result := FS_EXEC_OK;
 end;

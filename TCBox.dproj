@@ -88,10 +88,14 @@
 			<DCCReference Include="PluginConsts.pas"/>
 			<DCCReference Include="settings.pas"/>
 			<DCCReference Include="gnugettext.pas"/>
+			<DCCReference Include="SettingUnit.pas">
+				<Form>SettingsForm</Form>
+				<FormType>dfm</FormType>
+			</DCCReference>
 			<None Include="TCBox.todo"/>
 			<RcItem Include="icon.ico">
 				<ResourceType>ICON</ResourceType>
-				<ResourceId>Icon_1</ResourceId>
+				<ResourceId>MAINICON</ResourceId>
 			</RcItem>
 			<RcItem Include="spin-loader.gif">
 				<ResourceType>RCDATA</ResourceType>
