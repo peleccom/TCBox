@@ -6,7 +6,7 @@ uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants,
   System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, gnugettext, settings,
-  pluginConsts, Vcl.XPMan, Vcl.Buttons, Log4D,DropboxSession;
+  pluginConsts, Vcl.XPMan, Vcl.Buttons, Log4D, DropboxSession;
 
 type
   TSettingsForm = class(TForm)
@@ -26,11 +26,11 @@ type
     languages: TStrings;
     logger: TLogLogger;
     session: TDropboxSession;
-    accessKeyFileName: string;
+    accessKeyFilename: string;
     procedure fillComboBox();
     procedure loadFormIcon();
     // delete key.txt file
-   function deleteKey(): boolean;
+    function deleteKey(): boolean;
   public
     { Public declarations }
   end;
@@ -72,13 +72,14 @@ begin
   LanguagesComboBox.Items.Assign(languages);
   DefaultInstance.TranslateProperties(LanguagesComboBox, 'languagecodes');
   DefaultInstance.TranslateProperties(LanguagesComboBox, 'languagenames');
-  LanguagesComboBox.ItemIndex := languages.IndexOf(GetCurrentLanguage);
+  LanguagesComboBox.ItemIndex :=
+    languages.IndexOf(Copy(GetCurrentLanguage(), 1, 2));
 end;
 
 procedure TSettingsForm.FormCreate(Sender: TObject);
 begin
   languages := TStringList.Create;
-  TranslateComponent(Self);
+  TranslateComponent(self);
   fillComboBox();
   loadFormIcon();
   Caption := PLUGIN_TITLE_SHORT + ' ' + _('settings');
@@ -97,7 +98,7 @@ begin
   lang := languages[LanguagesComboBox.ItemIndex];
   UseLanguage(lang);
   GetSettings.setLangStr(lang);
-  RetranslateComponent(Self);
+  RetranslateComponent(self);
 
 end;
 

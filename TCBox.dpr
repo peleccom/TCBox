@@ -708,9 +708,9 @@ begin
   // settings configuration
   settingfilename := PluginPath + PLUGIN_SETTINGS_FILENAME;
   GetSettings().load();
+
   UseLanguage(GetSettings().getLangStr());
   DefaultInstance.BindtextdomainToFile('languagecodes',
-
     PluginPath + PLUGIN_LANGUAGE_CODES_PATH);
 
   // free LocalEncoding
