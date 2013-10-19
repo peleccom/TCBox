@@ -80,6 +80,9 @@ type
     // load gif image to spinner
     procedure loadSpinnerGif();
 
+    // load form icon
+    procedure loadFormIcon();
+
     // start accessTokenTimer and set UI
     procedure startCheckAccessTokenTimer();
     // stop accessTokenTimer and set UI
@@ -324,6 +327,7 @@ var
   page: integer;
   gifStream: TResourceStream;
   settings: TSettings;
+  mhIcon: integer;
 begin
   // gnugettext
   TranslateComponent(self);
@@ -334,6 +338,7 @@ begin
   PageControl1.ActivePageIndex := ENTER_PAGE;
   EnterPageLabel.Caption := getPluginHelloTitle();
   loadSpinnerGif();
+  loadFormIcon();
 end;
 
 function TLogInForm.getUserName: string;
@@ -345,6 +350,19 @@ begin
     Result := json.Get('display_name').jsonvalue.Value;
   finally
     json.Free;
+  end;
+end;
+
+procedure TLogInForm.loadFormIcon;
+var
+  mhIcon: integer;
+begin
+  mhIcon := LoadIcon(hInstance, 'MAINICON');
+  if mhIcon > 0 then
+  begin
+    mhIcon := SendMessage(Handle, WM_SETICON, ICON_SMALL, mhIcon);
+    if mhIcon > 0 then
+      DestroyIcon(mhIcon);
   end;
 end;
 
@@ -390,7 +408,7 @@ var
   gifStream: TResourceStream;
   gif: TGIFImage;
 begin
-  gifStream := TResourceStream.Create(HInstance, 'spin_loader', RT_RCDATA);
+  gifStream := TResourceStream.Create(hInstance, 'spin_loader', RT_RCDATA);
   gif := TGIFImage.Create;
   try
     gif.LoadFromStream(gifStream);
