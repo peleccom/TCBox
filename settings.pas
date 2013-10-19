@@ -1,19 +1,37 @@
 unit settings;
 
 interface
+
 uses
-  iniFiles, System.SysUtils;
+  iniFiles, System.SysUtils, Vcl.Dialogs;
+
 type
 
-TSettings = class
-   procedure load(filename: string);
-   procedure save(filename: string);
-   function getLangStr(): string;
-   private
+  TSettings = class
+    procedure load();
+    procedure save();
+    function getLangStr(): string;
+  private
     langStr: string;
-end;
+  end;
+
+function GetSettings(): TSettings;
+
+var
+  settingfilename: string;
 
 implementation
+
+var
+
+  _Singleton: TSettings = nil;
+
+function GetSettings(): TSettings;
+begin
+  if not Assigned(_Singleton) then
+    _Singleton := TSettings.Create;
+  Result := _Singleton
+end;
 
 { TSettings }
 
@@ -22,22 +40,29 @@ begin
   Result := langStr;
 end;
 
-procedure TSettings.load(filename: string);
+procedure TSettings.load();
 var
   ini: TMemIniFile;
   res: string;
 begin
-  ini := TMemIniFile.Create(filename, TEncoding.UTF8);
-   try
-     langStr := ini.ReadString('Options', 'LANG', '');
-   finally
-     ini.Free;
-   end;
+  ini := TMemIniFile.Create(settingfilename, TEncoding.UTF8);
+  try
+      langStr := ini.ReadString('Options', 'LANG', '');
+  finally
+    ini.Free;
+  end;
 end;
 
-procedure TSettings.save(filename: string);
+procedure TSettings.save();
 begin
-
+  //
 end;
+
+initialization
+
+finalization
+
+if Assigned(_Singleton) then
+  _Singleton.Free;
 
 end.

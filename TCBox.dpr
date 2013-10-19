@@ -148,11 +148,7 @@ function FsInitW(PluginNr: Integer; pProgressProcW: tProgressProcW;
 var
   token: TOAuthToken;
   url: string;
-  settings: TSettings;
 begin
-  settings := TSettings.Create();
-  settings.load(PluginPath + PLUGIN_SETTINGS_FILENAME);
-  settings.Free;
   ProgressProc := pProgressProcW;
   LogProc := pLogProcW;
   RequestProc := pRequestProcW;
@@ -692,5 +688,9 @@ begin
   TLogLogger.GetRootLogger.Level := All;
   logger := TLogLogger.GetLogger('Default');
 
+  // settings configuration
+  settingfilename := PluginPath + PLUGIN_SETTINGS_FILENAME;
+  GetSettings().load();
+  UseLanguage(GetSettings().getLangStr());
   // free LocalEncoding
 end.
