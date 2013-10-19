@@ -31,6 +31,10 @@ object LogInForm: TLogInForm
       Caption = 'TabSheet1'
       TabVisible = False
       OnShow = TabSheet1Show
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       DesignSize = (
         236
         184)
@@ -64,7 +68,6 @@ object LogInForm: TLogInForm
         Margins.Right = 10
         Align = alTop
         Alignment = taRightJustify
-        Caption = 'hello'
         Color = clBtnFace
         Font.Charset = DEFAULT_CHARSET
         Font.Color = clGreen
@@ -73,8 +76,8 @@ object LogInForm: TLogInForm
         Font.Style = [fsItalic]
         ParentColor = False
         ParentFont = False
-        ExplicitLeft = 198
-        ExplicitWidth = 28
+        ExplicitLeft = 221
+        ExplicitWidth = 5
       end
       object Enter: TButton
         Left = 25
@@ -82,7 +85,7 @@ object LogInForm: TLogInForm
         Width = 185
         Height = 28
         Anchors = []
-        Caption = #1042#1093#1086#1076
+        Caption = 'Enter'
         TabOrder = 0
         OnClick = EnterClick
       end
@@ -92,7 +95,7 @@ object LogInForm: TLogInForm
         Width = 185
         Height = 28
         Anchors = []
-        Caption = #1057#1084#1077#1085#1080#1090#1100' '#1087#1086#1083#1100#1079#1086#1074#1072#1090#1077#1083#1103
+        Caption = 'Change user'
         TabOrder = 1
         OnClick = SignOutClick
       end
@@ -102,7 +105,7 @@ object LogInForm: TLogInForm
         Width = 185
         Height = 29
         Anchors = []
-        Caption = #1040#1074#1090#1086#1088#1080#1079#1086#1074#1072#1090#1100#1089#1103
+        Caption = 'Log in'
         TabOrder = 2
         OnClick = SignInClick
       end
@@ -111,6 +114,10 @@ object LogInForm: TLogInForm
       Caption = 'TabSheet2'
       ImageIndex = 1
       TabVisible = False
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       DesignSize = (
         236
         184)
@@ -121,9 +128,8 @@ object LogInForm: TLogInForm
         Height = 13
         Align = alTop
         Alignment = taCenter
-        Caption = 'AcceptPageLabel Text'
         WordWrap = True
-        ExplicitWidth = 107
+        ExplicitWidth = 3
       end
       object SpinnerImage: TImage
         Left = 88
@@ -140,7 +146,7 @@ object LogInForm: TLogInForm
         Width = 102
         Height = 28
         Anchors = []
-        Caption = #1055#1088#1080#1085#1103#1090#1100
+        Caption = 'Accept'
         TabOrder = 0
         Visible = False
         OnClick = AcceptButtonClick
@@ -151,7 +157,7 @@ object LogInForm: TLogInForm
         Width = 102
         Height = 28
         Anchors = []
-        Caption = #1053#1072#1079#1072#1076
+        Caption = 'Back'
         TabOrder = 1
         OnClick = CancelButtonClick
       end
@@ -160,15 +166,18 @@ object LogInForm: TLogInForm
       Caption = 'TabSheet3'
       ImageIndex = 2
       TabVisible = False
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       object ConnectResultLabel: TLabel
         Left = 0
         Top = 0
-        Width = 236
+        Width = 109
         Height = 13
         Align = alTop
         Alignment = taCenter
-        Caption = #1057#1086#1077#1076#1080#1085#1077#1085#1080#1077' '#1091#1089#1090#1072#1085#1086#1074#1083#1077#1085#1086
-        ExplicitWidth = 130
+        Caption = 'Connected to Dropbox'
       end
       object BitBtn1: TBitBtn
         Left = 0

@@ -87,6 +87,7 @@
 			<DCCReference Include="Log4D.pas"/>
 			<DCCReference Include="PluginConsts.pas"/>
 			<DCCReference Include="settings.pas"/>
+			<DCCReference Include="gnugettext.pas"/>
 			<None Include="TCBox.todo"/>
 			<RcItem Include="icon.ico">
 				<ResourceType>ICON</ResourceType>

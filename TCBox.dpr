@@ -1,9 +1,5 @@
 ﻿library TCBox;
 
-
-
-
-
 {$R *.dres}
 
 uses
@@ -25,11 +21,12 @@ uses
   DropboxSession in '..\DropboxAPI\DropboxSession.pas',
   OAuth in '..\DropboxAPI\OAuth.pas',
   iso8601Unit in '..\DropboxAPI\iso8601Unit.pas',
-  LogInUnit in 'LogInUnit.pas' {LogInForm},
+  LogInUnit in 'LogInUnit.pas' {LogInForm} ,
   mycrypt in 'mycrypt.pas',
   Log4D in 'Log4D.pas',
   PluginConsts in 'PluginConsts.pas',
-  settings in 'settings.pas';
+  settings in 'settings.pas',
+  gnugettext in 'gnugettext.pas';
 
 // httpGet in 'httpGet.pas';
 
@@ -151,7 +148,7 @@ function FsInitW(PluginNr: Integer; pProgressProcW: tProgressProcW;
 var
   token: TOAuthToken;
   url: string;
-  settings : TSettings;
+  settings: TSettings;
 begin
   settings := TSettings.Create();
   settings.load(PluginPath + PLUGIN_SETTINGS_FILENAME);

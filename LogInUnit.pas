@@ -9,7 +9,7 @@ uses
   DropboxClient, DropboxSession, Vcl.Buttons, Vcl.ComCtrls, OAuth, ShellApi,
   Vcl.ExtCtrls,
   mycrypt, IdCoderMIME, AccessConfig, Log4D, Data.DBxjson, PluginConsts,
-  DropboxRest, Vcl.Imaging.GIFImg;
+  DropboxRest, Vcl.Imaging.GIFImg, gnugettext, settings;
 
 const
   // * TIMEOUTS *
@@ -113,8 +113,8 @@ begin
     begin
       logger.Warn('SignIn: Opening browser failed. Received error code ' +
         InttoStr(shellResult));
-      InputBox('Не удалось запустить браузер по умолчанию',
-        'Перейдите пожалуйста по этой ссылке в вашем браузере:', url);
+      InputBox(_('Unable to start the default browser'),
+        _('Please go to this link in your browser:'), url);
     end;
     SignIn.Enabled := False;
     OpenBrowserTimer.Interval := BROWSER_OPEN_TIMEOUT;
@@ -140,7 +140,8 @@ procedure TLogInForm.startCheckAccessTokenTimer;
 begin
   SpinnerImage.Visible := True;
   AcceptButton.Visible := False;
-  AcceptPageLabel.Caption := 'Подтвердите доступ приложению в вашем браузере';
+  AcceptPageLabel.Caption :=
+    _('Allow access to your Dropbox account in your browser');
   // start a timer
   checkAccessTokenTimer.Interval := CHECK_ACCESS_TOKEN_INTERVAl;
   checkAccessTokenTimerCount := 0;
@@ -152,8 +153,9 @@ begin
   SpinnerImage.Visible := False;
   checkAccessTokenTimer.Enabled := False;
   AcceptButton.Visible := True;
-  AcceptPageLabel.Caption := 'Подтвердите доступ приложению в вашем браузере ' +
-    'и после этого нажмите кнопку `Принять`';
+  AcceptPageLabel.Caption :=
+    _('Allow access to your Dropbox account in your browser. ' +
+    'And click `accept` button');
 end;
 
 procedure TLogInForm.TabSheet1Show(Sender: TObject);
@@ -321,13 +323,16 @@ procedure TLogInForm.FormCreate(Sender: TObject);
 var
   page: integer;
   gifStream: TResourceStream;
+  settings: TSettings;
 begin
+  // gnugettext
+  TranslateComponent(self);
   for page := 0 to PageControl1.PageCount - 1 do
   begin
     PageControl1.Pages[page].TabVisible := False;
   end;
   PageControl1.ActivePageIndex := ENTER_PAGE;
-  EnterPageLabel.Caption := PLUGIN_HELLO_TITLE;
+  EnterPageLabel.Caption := getPluginHelloTitle();
   loadSpinnerGif();
 end;
 

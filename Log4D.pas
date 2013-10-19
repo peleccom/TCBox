@@ -1009,7 +1009,8 @@ const
   CRLF = #13#10;
   MilliSecsPerDay = 24 * 60 * 60 * 1000;
 
-resourcestring
+//resourcestring
+const
   AddingLoggerMsg         = 'Adding logger "%s" in error handler';
   AppenderDefinedMsg      = 'Appender "%s" was already parsed';
   BadConfigFileMsg        = 'Couldn''t read configuration file "%s" - %s';
