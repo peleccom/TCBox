@@ -263,8 +263,6 @@ begin
   self.session := session;
   self.client := client;
   self.accessKeyFilename := accessKeyFilename;
-  if not TUserLogin.loadKey(accessKeyFilename, session) then
-    logger.Info('Key file not loaded');
 end;
 
 procedure TLogInForm.EnterClick(Sender: TObject);

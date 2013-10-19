@@ -134,6 +134,12 @@ function ShowLoginForm: boolean;
 var
   modal: TModalResult;
 begin
+  if TUserLogin.loadKey(AccessKeyFullFileName, DropboxSession) then
+    begin
+      Result := True;
+      Exit;
+    end;
+  logger.Info('Key file not loaded');
   LogInForm := TLogInForm.Create(nil, DropboxSession, DropboxClient,
     AccessKeyFullFileName);
   modal := LogInForm.ShowModal;
