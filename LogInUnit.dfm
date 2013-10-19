@@ -30,6 +30,8 @@ object LogInForm: TLogInForm
       Caption = 'TabSheet1'
       TabVisible = False
       OnShow = TabSheet1Show
+      ExplicitLeft = 8
+      ExplicitTop = 10
       DesignSize = (
         236
         184)
@@ -74,35 +76,25 @@ object LogInForm: TLogInForm
         ExplicitLeft = 221
         ExplicitWidth = 5
       end
-      object Enter: TButton
-        Left = 25
-        Top = 70
-        Width = 185
-        Height = 28
-        Anchors = []
-        Caption = 'Enter'
-        TabOrder = 0
-        OnClick = EnterClick
-      end
-      object SignOut: TButton
-        Left = 25
-        Top = 139
-        Width = 185
-        Height = 28
-        Anchors = []
-        Caption = 'Change user'
-        TabOrder = 1
-        OnClick = SignOutClick
-      end
       object SignIn: TButton
         Left = 25
-        Top = 104
+        Top = 67
         Width = 185
         Height = 29
         Anchors = []
         Caption = 'Log in'
-        TabOrder = 2
+        TabOrder = 0
         OnClick = SignInClick
+      end
+      object Enter: TButton
+        Left = 25
+        Top = 102
+        Width = 185
+        Height = 28
+        Anchors = []
+        Caption = 'Enter'
+        TabOrder = 1
+        OnClick = EnterClick
       end
     end
     object TabSheet2: TTabSheet
@@ -157,18 +149,15 @@ object LogInForm: TLogInForm
       Caption = 'TabSheet3'
       ImageIndex = 2
       TabVisible = False
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       object ConnectResultLabel: TLabel
         Left = 0
         Top = 0
-        Width = 109
+        Width = 236
         Height = 13
         Align = alTop
         Alignment = taCenter
         Caption = 'Connected to Dropbox'
+        ExplicitWidth = 109
       end
       object BitBtn1: TBitBtn
         Left = 0

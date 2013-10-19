@@ -2,8 +2,8 @@ object SettingsForm: TSettingsForm
   Left = 0
   Top = 0
   BorderStyle = bsDialog
-  ClientHeight = 223
-  ClientWidth = 272
+  ClientHeight = 119
+  ClientWidth = 273
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -32,25 +32,28 @@ object SettingsForm: TSettingsForm
     TabOrder = 0
     OnChange = LanguagesComboBoxChange
   end
-  object Button1: TButton
+  object LogOutButton: TButton
     Left = 8
-    Top = 57
+    Top = 49
     Width = 107
     Height = 25
     Caption = 'Log out'
     TabOrder = 1
+    OnClick = LogOutButtonClick
   end
   object BitBtn1: TBitBtn
     Left = 0
-    Top = 198
-    Width = 272
+    Top = 94
+    Width = 273
     Height = 25
     Align = alBottom
-    Kind = bkClose
+    Kind = bkOK
     NumGlyphs = 2
     TabOrder = 2
-    ExplicitLeft = 88
-    ExplicitTop = 168
-    ExplicitWidth = 75
+    ExplicitLeft = -7
+  end
+  object XPManifest1: TXPManifest
+    Left = 176
+    Top = 144
   end
 end

@@ -7,9 +7,8 @@ uses
   System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls,
   DropboxClient, DropboxSession, Vcl.Buttons, Vcl.ComCtrls, OAuth, ShellApi,
-  Vcl.ExtCtrls,
-  mycrypt, IdCoderMIME, AccessConfig, Log4D, Data.DBxjson, PluginConsts,
-  DropboxRest, Vcl.Imaging.GIFImg, gnugettext, settings;
+  Vcl.ExtCtrls, Log4D, Data.DBxjson, PluginConsts,
+  DropboxRest, Vcl.Imaging.GIFImg, gnugettext, settings, UserLogin;
 
 const
   // * TIMEOUTS *
@@ -43,15 +42,13 @@ type
     EnterPageLabel: TLabel;
     Label1: TLabel;
     UserNameLabel: TLabel;
-    Enter: TButton;
-    SignOut: TButton;
     SignIn: TButton;
     checkAccessTokenTimer: TTimer;
     SpinnerImage: TImage;
     OpenBrowserTimer: TTimer;
+    Enter: TButton;
     constructor Create(AOwner: TComponent; session: TDropboxSession;
       client: TDropboxClient; accessKeyFilename: string);
-    procedure SignOutClick(Sender: TObject);
     procedure SignInClick(Sender: TObject);
     procedure EnterClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
@@ -66,13 +63,6 @@ type
     accessKeyFilename: string;
     logger: TLogLogger;
     checkAccessTokenTimerCount: integer;
-    function saveKey(): boolean;
-    function loadKey(): boolean;
-    function deleteKey(): boolean;
-
-    // crypt fucntions
-    function encrypt(Data: string): string;
-    function decrypt(Data: string): string;
 
     // helper client functions
     function getUserName(): string;
@@ -131,14 +121,6 @@ begin
   end;
 end;
 
-procedure TLogInForm.SignOutClick(Sender: TObject);
-begin
-  if not deleteKey() then
-    logger.Debug('Key file not deleted');
-  session.unlink();
-  TabSheet1Show(self);
-end;
-
 procedure TLogInForm.startCheckAccessTokenTimer;
 begin
   SpinnerImage.Visible := True;
@@ -167,7 +149,6 @@ begin
   begin
     // logged in
     UserNameLabel.Visible := True;
-    SignOut.Visible := True;
     Enter.Visible := True;
     SignIn.Visible := False;
 
@@ -184,7 +165,6 @@ begin
   else
   begin
     UserNameLabel.Visible := False;
-    SignOut.Visible := False;
     Enter.Visible := False;
     SignIn.Visible := True;
     UserNameLabel.Caption := '';
@@ -222,7 +202,7 @@ end;
 
 procedure TLogInForm.BitBtn1Click(Sender: TObject);
 begin
-  if not saveKey() then
+  if not TUserLogin.saveKey(accessKeyFilename, session) then
     logger.Debug('Key file not saved');
 end;
 
@@ -283,38 +263,8 @@ begin
   self.session := session;
   self.client := client;
   self.accessKeyFilename := accessKeyFilename;
-  if not loadKey() then
+  if not TUserLogin.loadKey(accessKeyFilename, session) then
     logger.Info('Key file not loaded');
-end;
-
-function TLogInForm.decrypt(Data: string): string;
-var
-  buf: string;
-begin
-  try
-    buf := TIdDecoderMIME.DecodeString(Data);
-    Result := decryptstring(buf, KEYFILE_PASS);
-  except
-    Result := '';
-  end;
-end;
-
-function TLogInForm.deleteKey: boolean;
-begin
-  //
-  Result := DeleteFile(accessKeyFilename);
-end;
-
-function TLogInForm.encrypt(Data: string): string;
-var
-  buf: string;
-begin
-  try
-    buf := Cryptstring(Data, KEYFILE_PASS);
-    Result := TIdEncoderMIME.EncodeString(buf);
-  except
-    Result := '';
-  end;
 end;
 
 procedure TLogInForm.EnterClick(Sender: TObject);
@@ -339,7 +289,7 @@ begin
   EnterPageLabel.Caption := getPluginHelloTitle();
   loadSpinnerGif();
   loadFormIcon();
-  Caption := PLUGIN_TITLE_SHORT +' ' + _('Login');
+  Caption := PLUGIN_TITLE_SHORT + ' ' + _('Login');
 end;
 
 function TLogInForm.getUserName: string;
@@ -364,43 +314,6 @@ begin
     mhIcon := SendMessage(Handle, WM_SETICON, ICON_SMALL, mhIcon);
     if mhIcon > 0 then
       DestroyIcon(mhIcon);
-  end;
-end;
-
-function TLogInForm.loadKey: boolean;
-var
-  keyFileStream: TFileStream;
-  stringStream: TStringStream;
-  bufString: string;
-begin
-  Result := True;
-  try
-    keyFileStream := TFileStream.Create(accessKeyFilename, fmOpenRead);
-    stringStream := TStringStream.Create();
-    try
-      stringStream.LoadFromStream(keyFileStream);
-      bufString := stringStream.DataString;
-      bufString := decrypt(bufString);
-      // check signature
-      if (pos(ACESS_KEY_SIGNATURE_STRING, bufString) <> 1) then
-      begin
-        logger.Debug('Key file signature incorrect');
-        Result := False;
-        exit;
-      end;
-      // delete signature
-      bufString := Copy(bufString, Length(ACESS_KEY_SIGNATURE_STRING) + 1,
-        Length(bufString) - Length(ACESS_KEY_SIGNATURE_STRING));
-      stringStream.Clear;
-      stringStream.WriteString(bufString);
-      stringStream.Seek(0, soFromBeginning);
-      session.LoadAccessToken(stringStream);
-    finally
-      keyFileStream.Free;
-      stringStream.Free;
-    end;
-  except
-    Result := False;
   end;
 end;
 
@@ -430,33 +343,6 @@ begin
   startCheckAccessTokenTimer();
   PageControl1.ActivePageIndex := CONFITM_PAGE;
   SignIn.Enabled := True;
-end;
-
-function TLogInForm.saveKey: boolean;
-var
-  keyFileStream: TFileStream;
-  stringStream: TStringStream;
-  bufString: string;
-begin
-  Result := True;
-  try
-    keyFileStream := TFileStream.Create(accessKeyFilename, fmCreate);
-    stringStream := TStringStream.Create();
-
-    try
-      session.SaveAccessToken(stringStream);
-      bufString := stringStream.DataString;
-      bufString := encrypt(ACESS_KEY_SIGNATURE_STRING + bufString);
-      stringStream.Clear;
-      stringStream.WriteString(bufString);
-      stringStream.SaveToStream(keyFileStream);
-    finally
-      keyFileStream.Free;
-      stringStream.Free;
-    end;
-  except
-    Result := False;
-  end;
 end;
 
 end.

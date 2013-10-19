@@ -92,6 +92,7 @@
 				<Form>SettingsForm</Form>
 				<FormType>dfm</FormType>
 			</DCCReference>
+			<DCCReference Include="UserLogin.pas"/>
 			<None Include="TCBox.todo"/>
 			<RcItem Include="icon.ico">
 				<ResourceType>ICON</ResourceType>

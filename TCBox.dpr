@@ -27,7 +27,8 @@ uses
   PluginConsts in 'PluginConsts.pas',
   settings in 'settings.pas',
   gnugettext in 'gnugettext.pas',
-  SettingUnit in 'SettingUnit.pas' {SettingsForm};
+  SettingUnit in 'SettingUnit.pas' {SettingsForm},
+  UserLogin in 'UserLogin.pas';
 
 // httpGet in 'httpGet.pas';
 
@@ -129,7 +130,7 @@ begin
   Result := StringReplace(path, '\', '/', [rfReplaceAll]);
 end;
 
-function ShowDllFormModal: boolean;
+function ShowLoginForm: boolean;
 var
   modal: TModalResult;
 begin
@@ -147,7 +148,8 @@ function showSettingsForm(): boolean;
 var
   form: TSettingsForm;
 begin
-  form := TSettingsForm.Create(nil);
+  form := TSettingsForm.Create(nil, DropboxSession,
+    AccessKeyFullFileName);
  form.ShowModal();
  form.Free;
 end;
@@ -157,7 +159,6 @@ function FsInitW(PluginNr: Integer; pProgressProcW: tProgressProcW;
 
 var
   token: TOAuthToken;
-  url: string;
 begin
   ProgressProc := pProgressProcW;
   LogProc := pLogProcW;
@@ -167,7 +168,7 @@ begin
   DropboxSession := TDropboxSession.Create(APP_KEY, APP_SECRET,
     TAccessType.dropbox);
   DropboxClient := TDropboxClient.Create(DropboxSession);
-  LoginClosed := not ShowDllFormModal();
+  LoginClosed := not ShowLoginForm();
   if LoginClosed then
     DropboxSession.unlink();
   Result := 0;
@@ -193,7 +194,7 @@ var
 begin
   if (not DropboxSession.isLinked()) and (not LoginClosed) then
   begin
-    if not ShowDllFormModal() then
+    if not ShowLoginForm() then
     begin
       DropboxSession.unlink();
       Result := INVALID_HANDLE_VALUE;
