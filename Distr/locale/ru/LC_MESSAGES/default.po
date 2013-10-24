@@ -1,0 +1,86 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: TCBox 0.4\n"
+"POT-Creation-Date: 2013-10-20 02:15\n"
+"PO-Revision-Date: 2013-10-20 02:19+0300\n"
+"Last-Translator: peleccom <peleccom@gmail.com>\n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 1.5.7\n"
+
+#. LogInForm..PageControl1..TabSheet1..EnterPageLabel..Caption
+#. Programmer's name for it: PLUGIN_TITLE
+#: LogInUnit.dfm:45
+msgid "Total Commander Dropbox plugin"
+msgstr "Total Commander Dropbox плагин"
+
+#. LogInForm..PageControl1..TabSheet1..SignIn..Caption
+#: LogInUnit.dfm:85
+msgid "Log in"
+msgstr "Авторизоваться"
+
+#. LogInForm..PageControl1..TabSheet1..Enter..Caption
+#: LogInUnit.dfm:95
+msgid "Enter"
+msgstr "Вход"
+
+#. LogInForm..PageControl1..TabSheet2..AcceptButton..Caption
+#: LogInUnit.dfm:132
+msgid "Accept"
+msgstr "Принять"
+
+#. LogInForm..PageControl1..TabSheet2..CancelButton..Caption
+#: LogInUnit.dfm:143
+msgid "Back"
+msgstr "Назад"
+
+#. LogInForm..PageControl1..TabSheet3..ConnectResultLabel..Caption
+#: LogInUnit.dfm:159
+msgid "Connected to Dropbox"
+msgstr "Соединение с Dropbox установлено"
+
+#. SettingsForm..Label1..Caption
+#: SettingUnit.dfm:24
+msgid "Language"
+msgstr "Язык"
+
+#. SettingsForm..LogOutButton..Caption
+#: SettingUnit.dfm:40
+msgid "Log out"
+msgstr "Выйти из аккаунта"
+
+#. ShellExecute fails
+#: LogInUnit.pas:109
+msgid "Unable to start the default browser"
+msgstr "Не удалось запустить стандартный браузер"
+
+#: LogInUnit.pas:110
+msgid "Please go to this link in your browser:"
+msgstr "Пожалуйста, откройте эту ссылку в вашем браузере"
+
+#: LogInUnit.pas:129
+msgid "Allow access to your Dropbox account in your browser"
+msgstr "Разрешите доступ к вашему аккаунту в браузере"
+
+#: LogInUnit.pas:143
+msgid ""
+"Allow access to your Dropbox account in your browser. And click `accept` "
+"button"
+msgstr "Разрешите доступ к вашему аккаунту в браузере и нажмите `Принять`"
+
+#. gnugettext
+#: LogInUnit.pas:290
+msgid "Login"
+msgstr "Авторизоваться"
+
+#: SettingUnit.pas:85
+msgid "settings"
+msgstr "настройки"
+
+#~ msgid "TCBox Login"
+#~ msgstr "TCBox авторизация"
+
+#~ msgid "Change user"
+#~ msgstr "Сменить пользователя"

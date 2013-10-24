@@ -3,6 +3,8 @@
 *.local
 *.dres
 *.res
+#backup files
+*.~*
 *.identcache
 __history
 *.drc
