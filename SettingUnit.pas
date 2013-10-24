@@ -99,6 +99,7 @@ begin
   UseLanguage(lang);
   GetSettings.setLangStr(lang);
   RetranslateComponent(self);
+  Caption := PLUGIN_TITLE_SHORT + ' ' + _('settings');
 
 end;
 
