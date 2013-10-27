@@ -1,2 +1,1 @@
-DEL tcbox.zip
-zip.vbs tcbox.zip pluginst.inf  ../ssleay32.dll ../libeay32.dll ../TCBox.wfx
+zip.py tcbox2.zip pluginst.inf  ../ssleay32.dll ../libeay32.dll ../TCBox.wfx locale
