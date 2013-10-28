@@ -42,6 +42,13 @@ type
   //
   function parseDate(dateStr: string): TDateTime;
 end;
+
+  TChunkedUploader = class
+      constructor Create(client: TDropboxClient; stream: TStream; size: Int64); //change integer
+      procedure uploadChunked(chunksize: Int64);
+      function finish(path: String;overwrite: Boolean=False;parentRev: String=''): String;
+  end;
+  function uploadChunk(stream: TStream; length: Int64;var uploadId: String;offset: Integer=0): Int64;
   function format_path(path : string):string;
   function Strip(s: String; ch: Char): String;
   function GetSimpleFileName(s: string):string;
@@ -425,6 +432,30 @@ begin
     host := FSession.API_HOST;
   base := FSession.buildUrl(host, target);
   Result := FSession.request(base,requestparams,requestheaders,params,method);
+end;
+
+{ TChunkedUploader }
+
+constructor TChunkedUploader.Create(client: TDropboxClient; stream: TStream;
+  size: Int64);
+begin
+//
+end;
+
+function TChunkedUploader.finish(path: String; overwrite: Boolean;
+  parentRev: String): String;
+begin
+//
+end;
+
+procedure TChunkedUploader.uploadChunked(chunksize: Int64);
+begin
+//
+end;
+
+function uploadChunk(stream: TStream; length: Int64;var uploadId: String;offset: Integer=0): Int64;
+begin
+  //
 end;
 
 end.
