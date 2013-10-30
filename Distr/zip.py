@@ -19,7 +19,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("zipfilename", help="Filename for created ziip")
     parser.add_argument('filenames', metavar="filename", nargs='+',
-                   help='an integer for the accumulator')
+                   help='filenames for zipping')
     args= parser.parse_args()
     zip_files(args.zipfilename, args.filenames)
 

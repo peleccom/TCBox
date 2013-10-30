@@ -9,17 +9,22 @@ TRANSLATE_MO = $(DOMAIN).mo
 LRU = $(LOCALE_DIR)\$(LANG_RU)\LC_MESSAGES
 LRU_PO = $(LRU)\$(TRANSLATE_PO)
 LRU_MO = $(LRU)\$(TRANSLATE_MO)
+LANG_CODES_MO = $(LOCALE_DIR)/languagecodes.mo
+LANG_CODES_PO = $(LOCALE_DIR)/languagecodes.po
 
-ziptcbox: tcbox
+tcbox: ziptcbox
+ziptcbox: ../tcbox.wfx locale
 	python zip.py tcbox.zip pluginst.inf  ../ssleay32.dll ../libeay32.dll ../TCBox.wfx locale
-tcbox: locale
-locale: locale_ru locale_lang_codes
-locale_ru:
+locale:  $(LRU_MO) $(LRU_PO) $(LANG_CODES_MO) 
+$(LRU_PO): ..\$(LRU_PO)
+	COPY ..\$(LRU_PO) $(LRU_PO) > NUL
+$(LRU_MO): ..\$(LRU_PO)
 	if not exist "$(LRU)" md "$(LRU)"
 	$(GNU_MSGFMT) ..\$(LRU_PO) -o $(LRU_MO)
-	COPY ..\$(LRU_PO) $(LRU_PO) > NUL
-locale_lang_codes:
-	$(GNU_MSGFMT) ..\$(LOCALE_DIR)\languagecodes.po -o $(LOCALE_DIR)\languagecodes.mo
+$(LANG_CODES_MO): ..\$(LANG_CODES_PO)
+	$(GNU_MSGFMT) ..\$(LANG_CODES_PO) -o $(LANG_CODES_MO)
+../tcbox.wfx: ../*.pas ../*.dfm ../*.res ../*.rc ../*.ico ../*.gif ../*.dpr
+	build_wfx.bat
 clear:
 	DEL tcbox.zip
 	RD  /S /Q locale
