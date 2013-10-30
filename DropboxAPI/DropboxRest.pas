@@ -357,9 +357,12 @@ begin
   if json = nil then
     raise Exception.Create('Non json response');
   FBody := json;
+  try
   FErrorMsg := (json.GET('error').JsonValue as TJSONString).Value;
   FUserErrorMsg := (json.GET('user_error').JsonValue as TJSONString).Value;
-
+  except
+   // field 'user_error' may be empty
+  end;
   if (FUserErrorMsg <> '') and (FUserErrorMsg <> FErrorMsg) then
     msg := Format('%s (%s)', [FUserErrorMsg, FErrorMsg])
   else if FErrorMsg <> '' then
