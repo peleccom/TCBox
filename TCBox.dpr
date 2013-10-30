@@ -16,19 +16,19 @@ uses
   AccessConfig,
   Data.DBXJSON,
   idComponent,
-  DropboxClient in '..\DropboxAPI\DropboxClient.pas',
-  DropboxRest in '..\DropboxAPI\DropboxRest.pas',
-  DropboxSession in '..\DropboxAPI\DropboxSession.pas',
-  OAuth in '..\DropboxAPI\OAuth.pas',
-  iso8601Unit in '..\DropboxAPI\iso8601Unit.pas',
-  LogInUnit in 'LogInUnit.pas' {LogInForm} ,
+  LogInUnit in 'LogInUnit.pas' {LogInForm},
   mycrypt in 'mycrypt.pas',
   Log4D in 'Log4D.pas',
   PluginConsts in 'PluginConsts.pas',
   settings in 'settings.pas',
   gnugettext in 'gnugettext.pas',
-  SettingUnit in 'SettingUnit.pas' {SettingsForm} ,
-  UserLogin in 'UserLogin.pas';
+  SettingUnit in 'SettingUnit.pas' {SettingsForm},
+  UserLogin in 'UserLogin.pas',
+  DropboxClient in 'DropboxAPI\DropboxClient.pas',
+  DropboxRest in 'DropboxAPI\DropboxRest.pas',
+  DropboxSession in 'DropboxAPI\DropboxSession.pas',
+  iso8601Unit in 'DropboxAPI\iso8601Unit.pas',
+  OAuth in 'DropboxAPI\OAuth.pas';
 
 // httpGet in 'httpGet.pas';
 

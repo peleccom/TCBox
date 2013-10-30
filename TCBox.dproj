@@ -75,11 +75,6 @@
 			<DelphiCompile Include="$(MainSource)">
 				<MainSource>MainSource</MainSource>
 			</DelphiCompile>
-			<DCCReference Include="..\DropboxAPI\DropboxClient.pas"/>
-			<DCCReference Include="..\DropboxAPI\DropboxRest.pas"/>
-			<DCCReference Include="..\DropboxAPI\DropboxSession.pas"/>
-			<DCCReference Include="..\DropboxAPI\OAuth.pas"/>
-			<DCCReference Include="..\DropboxAPI\iso8601Unit.pas"/>
 			<DCCReference Include="LogInUnit.pas">
 				<Form>LogInForm</Form>
 			</DCCReference>
@@ -93,6 +88,11 @@
 				<FormType>dfm</FormType>
 			</DCCReference>
 			<DCCReference Include="UserLogin.pas"/>
+			<DCCReference Include="DropboxAPI\DropboxClient.pas"/>
+			<DCCReference Include="DropboxAPI\DropboxRest.pas"/>
+			<DCCReference Include="DropboxAPI\DropboxSession.pas"/>
+			<DCCReference Include="DropboxAPI\iso8601Unit.pas"/>
+			<DCCReference Include="DropboxAPI\OAuth.pas"/>
 			<None Include="TCBox.todo"/>
 			<RcItem Include="icon.ico">
 				<ResourceType>ICON</ResourceType>
