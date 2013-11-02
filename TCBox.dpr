@@ -16,13 +16,13 @@ uses
   AccessConfig,
   Data.DBXJSON,
   idComponent,
-  LogInUnit in 'LogInUnit.pas' {LogInForm},
+  LogInUnit in 'LogInUnit.pas' {LogInForm} ,
   mycrypt in 'mycrypt.pas',
   Log4D in 'Log4D.pas',
   PluginConsts in 'PluginConsts.pas',
   settings in 'settings.pas',
   gnugettext in 'gnugettext.pas',
-  SettingUnit in 'SettingUnit.pas' {SettingsForm},
+  SettingUnit in 'SettingUnit.pas' {SettingsForm} ,
   UserLogin in 'UserLogin.pas',
   DropboxClient in 'DropboxAPI\DropboxClient.pas',
   DropboxRest in 'DropboxAPI\DropboxRest.pas',
@@ -159,6 +159,81 @@ begin
   form.Free;
 end;
 
+function PutBigFile(f: TFileStream; localFilename: String;
+  dropboxFilename: String; overwrite: boolean = False): Integer;
+var
+  chunkedUploader: TChunkedUploader;
+  size: Int64;
+  json: TJSONObject;
+  percentUpload: byte;
+begin
+  ProgressProc(PluginNumber, PChar(localFilename), PChar(dropboxFilename), 0);
+  size := f.size;
+  chunkedUploader := DropboxClient.getChunkedUpload(f, f.size);
+  try
+    while chunkedUploader.Offset < size do
+    begin
+      logger.Debug(IntTostr(chunkedUploader.Offset));
+      if size <> 0 then
+        percentUpload := Round((chunkedUploader.Offset * 100) / size)
+      else
+        percentUpload := 0;
+      if ProgressProc(PluginNumber, PChar(localFilename),
+        PChar(dropboxFilename), percentUpload) = 1 then
+
+      // userabort
+      begin
+        Result := FS_FILE_USERABORT;
+        Exit;
+      end;
+      try
+        chunkedUploader.uploadChunked(PLUGIN_CHUNK_SIZE);
+      except
+        begin
+          logger.Error('UploadChunked exception');
+          raise;
+        end;
+      end;
+    end;
+    json := chunkedUploader.finish(dropboxFilename, overwrite);
+    if json <> nil then
+      json.Free;
+    Result := FS_FILE_OK;
+    ProgressProc(PluginNumber, PChar(localFilename),
+      PChar(dropboxFilename), 100);
+  finally
+    chunkedUploader.Free;
+  end;
+end;
+
+function PutSmallFile(f: TFileStream; localFilename: String;
+  dropboxFilename: String; overwrite: boolean): Integer;
+var
+  handler: TDownloadEventHandler;
+begin
+  ProgressProc(PluginNumber, PChar(localFilename), PChar(dropboxFilename), 0);
+  handler := TDownloadEventHandler.Create(localFilename, dropboxFilename);
+  try
+    DropboxClient.putFile(dropboxFilename, f, overwrite, '', handler.onBegin,
+      handler.onWork);
+    if handler.isAborted then
+    begin
+      // close filestream and delete file
+      Result := FS_FILE_USERABORT;
+      Exit;
+    end
+    else
+    begin
+      Result := FS_FILE_OK;
+      Exit;
+    end;
+
+  finally
+    handler.Free;
+  end;
+  ProgressProc(PluginNumber, PChar(localFilename), PChar(dropboxFilename), 100);
+end;
+
 function FsInitW(PluginNr: Integer; pProgressProcW: tProgressProcW;
   pLogProcW: tLogProcW; pRequestProcW: tRequestProcW): Integer; stdcall;
 
@@ -216,7 +291,7 @@ begin
     spath := normalizeDropboxPath(spath);
     json := DropboxClient.metaData(spath, True);
     JsonArray := json.Get('contents').jsonvalue as TJSONArray;
-    for i := 0 to JsonArray.Size - 1 do
+    for i := 0 to JsonArray.size - 1 do
     begin
       LoadFindDatawFromJSON(JsonArray.Get(i) as TJSONObject, FindDatatmp);
       PFindNextRec.PList.Add(FindDatatmp);
@@ -461,9 +536,12 @@ function FsPutFileW(LocalName, RemoteName: pwidechar; CopyFlags: Integer)
 var
   remotefilename: string;
   fs: TFileStream;
-  handler: TDownloadEventHandler;
+  filesize: Int64;
+  overwrite: boolean;
 begin
   remotefilename := normalizeDropboxPath(RemoteName);
+  overwrite := False;
+
   if (((CopyFlags and FS_COPYFLAGS_RESUME) = 0) and
     ((CopyFlags and FS_COPYFLAGS_OVERWRITE) = 0) and
     DropboxClient.exists(remotefilename)) then
@@ -477,47 +555,34 @@ begin
     Exit;
   end;
   if (CopyFlags and FS_COPYFLAGS_OVERWRITE) <> 0 then
-    // delete file
-    try
-      DropboxClient.delete(remotefilename)
-    except
-      on E: Exception do
-      begin
-        logger.Error('Exception in PUTFile(delete remote file) ' + E.ClassName +
-          ' ' + E.Message);
-        Result := FS_FILE_NOTSUPPORTED;
-        Exit;
-      end;
-    end;
+    overwrite := True;
+
   fs := nil;
-  handler := nil;
   try
     try
       fs := TFileStream.Create(LocalName, fmOpenRead);
-      handler := TDownloadEventHandler.Create(LocalName, remotefilename);
-      DropboxClient.putFile(remotefilename, fs, False, '', handler.onBegin,
-        handler.onWork);
-      if handler.isAborted then
+      filesize := fs.size;
+
+      if filesize > PLUGIN_BIGFILE_SIZE then { change }
       begin
-        // close filestream and delete file
-        fs.Free;
-        Result := FS_FILE_USERABORT;
-        Exit;
+        logger.Debug('Uploading bigFile');
+        // use uploadbigfile (chunked upload)
+        Result := PutBigFile(fs, LocalName, remotefilename, overwrite);
+        if Result <> FS_FILE_OK then
+          Exit;
       end
       else
       begin
-        FreeAndNil(fs);
-        Result := FS_FILE_OK;
-        if (CopyFlags and FS_COPYFLAGS_MOVE) <> 0 then
-          DeleteFile(LocalName);
-        Exit;
+        logger.Debug('Uploading smallFile');
+        Result := PutSmallFile(fs, LocalName, remotefilename, overwrite);
+        if Result <> FS_FILE_OK then
+          Exit;
       end;
-
+      if (CopyFlags and FS_COPYFLAGS_MOVE) <> 0 then
+        DeleteFile(LocalName);
     finally
       if fs <> nil then
         fs.Free;
-      if handler <> nil then
-        handler.Free;
     end;
   except
     on E1: ErrorResponse do
@@ -549,7 +614,7 @@ begin
   end;
 end;
 
-function FsRenMovFileW(OldName, NewName: pwidechar; Move, OverWrite: bool;
+function FsRenMovFileW(OldName, NewName: pwidechar; Move, overwrite: bool;
   RemoteInfo: pRemoteInfo): Integer; stdcall;
 var
   oldFileName, newFileName: string;
@@ -559,12 +624,12 @@ begin
   oldFileName := normalizeDropboxPath(OldName);
   newFileName := normalizeDropboxPath(NewName);
   newFileExists := DropboxClient.exists(newFileName);
-  if (not OverWrite and newFileExists) = True then
+  if (not overwrite and newFileExists) = True then
   begin
     Result := FS_FILE_EXISTS;
     Exit;
   end;
-  if (OverWrite and newFileExists) = True then
+  if (overwrite and newFileExists) = True then
     try
       try
         ProgressProc(PluginNumber, OldName, NewName, 0);

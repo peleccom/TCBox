@@ -14,6 +14,10 @@ const
   PLUGIN_SETTINGS_FILENAME = 'settings.ini';
   PLUGIN_LANGUAGE_CODES_PATH = 'locale\languagecodes.mo';
 
+  // minimum filesize to upload with ChunkedUploader
+  PLUGIN_BIGFILE_SIZE = 2 * 1024 * 1024;
+  PLUGIN_CHUNK_SIZE = 4 * 1024 * 1024;
+
 resourcestring
   PLUGIN_TITLE = 'Total Commander Dropbox plugin';
 
