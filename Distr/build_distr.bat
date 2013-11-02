@@ -1,1 +1,0 @@
-zip.py tcbox2.zip pluginst.inf  ../ssleay32.dll ../libeay32.dll ../TCBox.wfx locale
