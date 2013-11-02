@@ -30,7 +30,7 @@ $(LRU_MO): ..\$(LRU_PO)
 	$(GNU_MSGFMT) ..\$(LRU_PO) -o $(LRU_MO)
 $(LANG_CODES_MO): ..\$(LANG_CODES_PO)
 	$(GNU_MSGFMT) ..\$(LANG_CODES_PO) -o $(LANG_CODES_MO)
-../tcbox.wfx: ../*.pas ../*.dfm ../*.res ../*.rc ../*.ico ../*.gif ../*.dpr
+../tcbox.wfx: ../*.pas ../*.dfm  ../*.rc ../*.ico ../*.gif ../*.dpr
 	build_wfx.bat
 clear:
 	DEL tcbox.zip
