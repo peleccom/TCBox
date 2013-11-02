@@ -50,7 +50,7 @@ type
     procedure Abort();
     function getChunkedUpload(stream: TStream; size: Int64): TChunkedUploader;
     function uploadChunk(stream: TStream; length: Int64; var uploadId: String;
-      offset: integer = 0): Int64;
+      offset: integer = 0; handler: TDownloadEventHandler=nil): Int64;
     //
     function parseDate(dateStr: string): TDateTime;
   end;
@@ -66,10 +66,11 @@ type
   public
     constructor Create(client: TDropboxClient; stream: TStream; size: Int64);
     // change integer
-    procedure uploadChunked(chunksize: Int64 = 4 * 1024 * 1024);
+    procedure uploadChunked(chunksize: Int64 = 4 * 1024 * 1024;
+      handler: TDownloadEventHandler = nil);
     function finish(path: String; overwrite: boolean = false;
       parentRev: String = ''): TJsonObject;
-    property Offset: Int64 read FOffset;
+    property offset: Int64 read FOffset;
   end;
 
 function format_path(path: string): string;
@@ -413,7 +414,8 @@ begin
 end;
 
 function TDropboxClient.putFile(fullPath: string; filestream: TStream;
-  overwrite: boolean; parentRev: string; handler: TDownloadEventHandler): string;
+  overwrite: boolean; parentRev: string;
+  handler: TDownloadEventHandler): string;
 var
   path, url: string;
   params: TStringList;
@@ -463,7 +465,7 @@ begin
 end;
 
 function TDropboxClient.uploadChunk(stream: TStream; length: Int64;
-  var uploadId: String; offset: integer): Int64;
+  var uploadId: String; offset: integer; handler: TDownloadEventHandler): Int64;
 var
   params: TStringList;
   url: String;
@@ -477,12 +479,13 @@ begin
   end;
   url := request('/chunked_upload', params, 'PUT', true);
   params.Free;
-  json := FRestClient.PUT_JSON(url, stream);
+  json := FRestClient.PUT_JSON(url, stream,nil,handler);
   try
     Result := (json.Get('offset').JsonValue as TJSONNumber).AsInt64;
     uploadId := json.Get('upload_id').JsonValue.value;
-    {ShowMessage('old offset ' + InttoStr(offset) + ' returned ' + InttoStr(Result)+
-    ' expected ' + inttostr(offset + length));}
+    //ShowMessage(json.ToString)
+    { ShowMessage('old offset ' + InttoStr(offset) + ' returned ' + InttoStr(Result)+
+      ' expected ' + inttostr(offset + length)); }
   finally
     json.Free;
   end;
@@ -531,9 +534,10 @@ begin
   params.Values['upload_id'] := FUploadId;
   if parentRev <> '' then
     params.Values['parent_rev'] := parentRev;
-  url := FClient.request(path, requestparams,requestheaders,params ,'POST', true);
+  url := FClient.request(path, requestparams, requestheaders, params,
+    'POST', true);
   try
-    Result := FClient.FRestClient.POST_JSON(url,  requestparams);
+    Result := FClient.FRestClient.POST_JSON(url, requestparams);
   finally
     params.Free;
     requestparams.Free;
@@ -542,7 +546,8 @@ begin
 
 end;
 
-procedure TChunkedUploader.uploadChunked(chunksize: Int64);
+procedure TChunkedUploader.uploadChunked(chunksize: Int64;
+  handler: TDownloadEventHandler);
 var
   nextChunkSize: Int64;
   bufferStream: TMemoryStream;
@@ -552,47 +557,47 @@ var
 begin
   bufferStream := TMemoryStream.Create;
   try
-      if (chunksize < (Self.FFileSize - FOffset)) then
-        nextChunkSize := chunksize
-      else
-        nextChunkSize := (Self.FFileSize - FOffset);
-      if (FLastBlock = nil) then
+    if (chunksize < (Self.FFileSize - FOffset)) then
+      nextChunkSize := chunksize
+    else
+      nextChunkSize := (Self.FFileSize - FOffset);
+    if (FLastBlock = nil) then
+    begin
+      bufferStream.CopyFrom(FFileStream, nextChunkSize);
+      FLastBlock := bufferStream;
+    end;
+    try
+      replyOffset := FClient.uploadChunk(bufferStream, nextChunkSize,
+        FUploadId, FOffset, handler);
+      if replyOffset <> (FOffset + nextChunkSize) then
+        FFileStream.Seek(replyOffset, soFromBeginning);
+      FOffset := replyOffset;
+      FLastBlock := nil;
+    except
+      on E: ErrorResponse do
       begin
-        bufferStream.CopyFrom(FFileStream, nextChunkSize);
-        FLastBlock := bufferStream;
-      end;
-      try
-        replyOffset := FClient.uploadChunk(bufferStream, nextChunkSize,
-          FUploadId, FOffset);
-        if replyOffset <> (FOffset + nextChunkSize) then
-            FFileStream.Seek(replyOffset, soFromBeginning);
-        FOffset := replyOffset;
-        FLastBlock := nil;
-      except
-        on E: ErrorResponse do
+        reply := E.Body;
+        if reply <> nil then
         begin
-          reply := E.Body;
-          if reply <> nil then
+          jsonOffset := reply.Get('offset');
+          if jsonOffset <> nil then
           begin
-            jsonOffset := reply.Get('offset');
-            if jsonOffset <> nil then
+            replyOffset := (jsonOffset.JsonValue as TJSONNumber).AsInt64;
+            if replyOffset <> 0 then
             begin
-              replyOffset := (jsonOffset.JsonValue as TJSONNumber).AsInt64;
-              if replyOffset <> 0 then
+              if replyOffset > FOffset then
               begin
-                if replyOffset > FOffset then
-                begin
-                  FLastBlock := nil;
-                  FOffset := replyOffset;
-                  FFileStream.Seek(FOffset, soFromBeginning);
-                end;
+                FLastBlock := nil;
+                FOffset := replyOffset;
+                FFileStream.Seek(FOffset, soFromBeginning);
               end;
-
             end;
+
           end;
         end;
-
       end;
+
+    end;
 
   finally
     bufferStream.Free;

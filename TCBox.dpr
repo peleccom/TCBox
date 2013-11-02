@@ -55,12 +55,13 @@ type
   end;
 
   TChunkedUploadEventHandler = class(TSimpleDownloadEventHandler)
-    constructor Create(source, destination: string);
+    constructor Create(source, destination: string; size: Int64);
     procedure onWork(ASender: TObject; AWorkMode: TWorkMode;
       AWorkCount: Int64); override;
     procedure setCurrentPosition(position: Int64);
   private
     FPosition: Int64;
+    FSize: Int64;
   end;
 
 var
@@ -200,14 +201,15 @@ begin
   try
     while chunkedUploader.Offset < size do
     begin
-      logger.Debug(IntTostr(chunkedUploader.Offset));
+      logger.Debug('Upload chunk with offset '+IntTostr(chunkedUploader.Offset));
+
       if size <> 0 then
         percentUpload := Round((chunkedUploader.Offset * 100) / size)
       else
         percentUpload := 0;
       if SendProgress(localFilename, dropboxFilename, percentUpload) then
 
-      // userabort
+      // user abort
       begin
         Result := FS_FILE_USERABORT;
         Exit;
@@ -738,14 +740,14 @@ begin
   isAborted := False;
 end;
 
-procedure TSimpleDownloadEventHandler.onBegin(ASender: TObject; AWorkMode: TWorkMode;
-  Max: Int64);
+procedure TSimpleDownloadEventHandler.onBegin(ASender: TObject;
+  AWorkMode: TWorkMode; Max: Int64);
 begin
   FMax := Max;
 end;
 
-procedure TSimpleDownloadEventHandler.onWork(ASender: TObject; AWorkMode: TWorkMode;
-  AWorkCount: Int64);
+procedure TSimpleDownloadEventHandler.onWork(ASender: TObject;
+  AWorkMode: TWorkMode; AWorkCount: Int64);
 var
   percent: Integer;
   isAborted: boolean;
@@ -779,9 +781,11 @@ end;
 
 { TChunkedUploadEventHandler }
 
-constructor TChunkedUploadEventHandler.Create(source, destination: string);
+constructor TChunkedUploadEventHandler.Create(source, destination: string;
+  size: Int64);
 begin
-
+  Inherited Create(source, destination);
+  FSize := size;
 end;
 
 procedure TChunkedUploadEventHandler.onWork(ASender: TObject;
@@ -789,14 +793,15 @@ procedure TChunkedUploadEventHandler.onWork(ASender: TObject;
 var
   percent: Integer;
   isAborted: boolean;
-  totalMax, totalWorkCount: Int64;
+  totalWorkCount: Int64;
 begin
-  totalMax := FMax + FPosition;
   totalWorkCount := AWorkCount + FPosition;
-  if totalMax = 0 then
+  if (Fsize = 0) then
     percent := 0
   else
-    percent := Round((totalWorkCount * 100) / totalMax);
+    percent := Round((totalWorkCount * 100) / Fsize);
+  //logger.Debug('total work ' + IntTostr(totalWorkCount));
+  //logger.Debug('progress ' + IntTostr(percent));
   isAborted := SendProgress(Fsource, FDestination, percent);
   if isAborted then
   begin
@@ -808,6 +813,7 @@ end;
 procedure TChunkedUploadEventHandler.setCurrentPosition(position: Int64);
 begin
   FPosition := position;
+  logger.Debug('position ------ ' +InttoStr(position));
 end;
 
 begin
