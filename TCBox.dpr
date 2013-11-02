@@ -857,7 +857,6 @@ begin
   else
     TLogLogger.GetRootLogger.Level := All;
 
-  ShowMessage(TLogLogger.GetRootLogger.Level.Name);
   logger := TLogLogger.GetLogger('Default');
 
   UseLanguage(GetSettings().getLangStr());

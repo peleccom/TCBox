@@ -65,6 +65,7 @@ begin
 end;
 
 procedure TSettingsForm.fillComboBox;
+var i :integer;
 begin
   LanguagesComboBox.Clear;
   languages.Clear;

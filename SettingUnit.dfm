@@ -19,7 +19,7 @@ object SettingsForm: TSettingsForm
   object Label1: TLabel
     Left = 8
     Top = 8
-    Width = 107
+    Width = 47
     Height = 13
     Caption = 'Language'
   end
@@ -50,7 +50,6 @@ object SettingsForm: TSettingsForm
     Kind = bkOK
     NumGlyphs = 2
     TabOrder = 2
-    ExplicitLeft = -7
   end
   object XPManifest1: TXPManifest
     Left = 176
