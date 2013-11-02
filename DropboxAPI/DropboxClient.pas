@@ -481,7 +481,9 @@ begin
   json := FRestClient.PUT_JSON(url, stream);
   try
     Result := (json.Get('offset').JsonValue as TJSONNumber).AsInt64;
-    uploadId := json.Get('upload_id').JsonValue.value
+    uploadId := json.Get('upload_id').JsonValue.value;
+    {ShowMessage('old offset ' + InttoStr(offset) + ' returned ' + InttoStr(Result)+
+    ' expected ' + inttostr(offset + length));}
   finally
     json.Free;
   end;
@@ -551,8 +553,6 @@ var
 begin
   bufferStream := TMemoryStream.Create;
   try
-    while Self.FOffset < Self.FFileSize do
-    begin
       if (chunksize < (Self.FFileSize - FOffset)) then
         nextChunkSize := chunksize
       else
@@ -563,8 +563,11 @@ begin
         FLastBlock := bufferStream;
       end;
       try
-        FOffset := FClient.uploadChunk(bufferStream, nextChunkSize,
+        replyOffset := FClient.uploadChunk(bufferStream, nextChunkSize,
           FUploadId, FOffset);
+        if replyOffset <> (FOffset + nextChunkSize) then
+            FFileStream.Seek(replyOffset, soFromBeginning);
+        FOffset := replyOffset;
         FLastBlock := nil;
       except
         on E: ErrorResponse do
@@ -582,6 +585,7 @@ begin
                 begin
                   FLastBlock := nil;
                   FOffset := replyOffset;
+                  FFileStream.Seek(FOffset, soFromBeginning);
                 end;
               end;
 
@@ -590,7 +594,6 @@ begin
         end;
 
       end;
-    end;
 
   finally
     bufferStream.Free;
