@@ -12,8 +12,10 @@ type
     procedure save();
     function getLangStr(): string;
     procedure setLangStr(lang: string);
+    function getLogLevel():String;
   private
     langStr: string;
+    logLevel:string;
   end;
 
 function GetSettings(): TSettings;
@@ -41,6 +43,11 @@ begin
   Result := langStr;
 end;
 
+function TSettings.getLogLevel: String;
+begin
+ Result := logLevel;
+end;
+
 procedure TSettings.load();
 var
   ini: TMemIniFile;
@@ -49,6 +56,7 @@ begin
   ini := TMemIniFile.Create(settingfilename, TEncoding.UTF8);
   try
     langStr := ini.ReadString('Options', 'LANG', '');
+    logLevel := ini.ReadString('Options','LogLevel','ALL');
   finally
     ini.Free;
   end;

@@ -83,6 +83,8 @@ var
   DropboxSession: TDropboxSession;
   DropboxClient: TDropboxClient;
 
+  sloglevel: string;
+
   logger: TLogLogger;
   logAppender: ILogAppender;
   logLayout: ILogLayout;
@@ -169,6 +171,7 @@ begin
   form := TSettingsForm.Create(nil, DropboxSession, AccessKeyFullFileName);
   form.ShowModal();
   form.Free;
+  Result := True;
 end;
 
 // Send progress value to TC
@@ -201,7 +204,8 @@ begin
   try
     while chunkedUploader.Offset < size do
     begin
-      logger.Debug('Upload chunk with offset '+IntTostr(chunkedUploader.Offset));
+      logger.Debug('Upload chunk with offset ' +
+        IntTostr(chunkedUploader.Offset));
 
       if size <> 0 then
         percentUpload := Round((chunkedUploader.Offset * 100) / size)
@@ -226,11 +230,11 @@ begin
     json := chunkedUploader.finish(dropboxFilename, overwrite);
     if json <> nil then
       json.Free;
-    Result := FS_FILE_OK;
     SendProgress(localFilename, dropboxFilename, 100);
   finally
     chunkedUploader.Free;
   end;
+  Result := FS_FILE_OK;
 end;
 
 function PutSmallFile(f: TFileStream; localFilename: String;
@@ -263,8 +267,6 @@ end;
 function FsInitW(PluginNr: Integer; pProgressProcW: tProgressProcW;
   pLogProcW: tLogProcW; pRequestProcW: tRequestProcW): Integer; stdcall;
 
-var
-  token: TOAuthToken;
 begin
   ProgressProc := pProgressProcW;
   LogProc := pLogProcW;
@@ -796,12 +798,12 @@ var
   totalWorkCount: Int64;
 begin
   totalWorkCount := AWorkCount + FPosition;
-  if (Fsize = 0) then
+  if (FSize = 0) then
     percent := 0
   else
-    percent := Round((totalWorkCount * 100) / Fsize);
-  //logger.Debug('total work ' + IntTostr(totalWorkCount));
-  //logger.Debug('progress ' + IntTostr(percent));
+    percent := Round((totalWorkCount * 100) / FSize);
+  // logger.Debug('total work ' + IntTostr(totalWorkCount));
+  // logger.Debug('progress ' + IntTostr(percent));
   isAborted := SendProgress(Fsource, FDestination, percent);
   if isAborted then
   begin
@@ -813,7 +815,7 @@ end;
 procedure TChunkedUploadEventHandler.setCurrentPosition(position: Int64);
 begin
   FPosition := position;
-  logger.Debug('position ------ ' +InttoStr(position));
+  logger.Debug('position ------ ' + IntTostr(position));
 end;
 
 begin
@@ -833,12 +835,30 @@ begin
     logLayout);
   logLayout.Options[DateFormatOpt] := 'dd-mm-yy hh:mm:ss';
   TLogBasicConfigurator.Configure(logAppender);
-  TLogLogger.GetRootLogger.Level := All;
-  logger := TLogLogger.GetLogger('Default');
 
   // settings configuration
   settingfilename := PluginPath + PLUGIN_SETTINGS_FILENAME;
   GetSettings().load();
+
+  sloglevel := LowerCase(GetSettings().getLogLevel());
+
+  if sloglevel = 'debug' then
+    TLogLogger.GetRootLogger.Level := Debug
+  else if sloglevel = 'info' then
+    TLogLogger.GetRootLogger.Level := Info
+  else if sloglevel = 'warn' then
+    TLogLogger.GetRootLogger.Level := Warn
+  else if sloglevel = 'error' then
+    TLogLogger.GetRootLogger.Level := Error
+  else if sloglevel = 'fatal' then
+    TLogLogger.GetRootLogger.Level := Fatal
+  else if sloglevel = 'off' then
+    TLogLogger.GetRootLogger.Level := Off
+  else
+    TLogLogger.GetRootLogger.Level := All;
+
+  ShowMessage(TLogLogger.GetRootLogger.Level.Name);
+  logger := TLogLogger.GetLogger('Default');
 
   UseLanguage(GetSettings().getLangStr());
   DefaultInstance.BindtextdomainToFile('languagecodes',
