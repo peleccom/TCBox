@@ -39,13 +39,13 @@ type
     // Creates and returns a Dropbox link to files or folders users can use to view a preview of the file in a web browser.
     function share(path: string): TJsonObject;
     procedure getFile(fromPath: string; stream: TStream; rev: string = '';
-      workbegin: TWorkEvent = nil; work: TWorkEvent = nil);
+      handler: TDownloadEventHandler = nil);
     function createFolder(path: string): boolean;
     // Delete file or folder. raise exception if fails
     procedure delete(path: string);
     function putFile(fullPath: string; filestream: TStream;
       overwrite: boolean = false; parentRev: string = '';
-      workbegin: TWorkEvent = nil; work: TWorkEvent = nil): string;
+      handler: TDownloadEventHandler = nil): string;
     // abort download operation
     procedure Abort();
     function getChunkedUpload(stream: TStream; size: Int64): TChunkedUploader;
@@ -265,7 +265,7 @@ begin
 end;
 
 procedure TDropboxClient.getFile(fromPath: string; stream: TStream; rev: string;
-  workbegin: TWorkEvent; work: TWorkEvent);
+  handler: TDownloadEventHandler);
 var
   path, url: string;
   params: TStringList;
@@ -275,7 +275,7 @@ begin
   if rev <> '' then
     params.Add('rev=' + rev);
   url := request(path, params, 'GET', true);
-  FRestClient.Get(url, stream, nil, workbegin, work);
+  FRestClient.Get(url, stream, nil, handler);
   params.Free;
 end;
 
@@ -413,8 +413,7 @@ begin
 end;
 
 function TDropboxClient.putFile(fullPath: string; filestream: TStream;
-  overwrite: boolean; parentRev: string; workbegin: TWorkEvent;
-  work: TWorkEvent): string;
+  overwrite: boolean; parentRev: string; handler: TDownloadEventHandler): string;
 var
   path, url: string;
   params: TStringList;
@@ -430,7 +429,7 @@ begin
   mimeTable := TIdThreadSafeMimeTable.Create();
   mimeType := mimeTable.GetFileMIMEType(fullPath);
   mimeTable.Free;
-  Result := FRestClient.PUT(url, filestream, nil, workbegin, work, mimeType);
+  Result := FRestClient.PUT(url, filestream, nil, handler, mimeType);
   params.Free;
 end;
 

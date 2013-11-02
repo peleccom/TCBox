@@ -43,13 +43,24 @@ type
     index: Integer;
   End;
 
-  TDownloadEventHandler = class
+  TSimpleDownloadEventHandler = class(TDownloadEventHandler)
     FMax: Int64;
     Fsource, FDestination: string;
     isAborted: boolean;
     constructor Create(source, destination: string);
-    procedure onBegin(ASender: TObject; AWorkMode: TWorkMode; Max: Int64);
-    procedure onWork(ASender: TObject; AWorkMode: TWorkMode; AWorkCount: Int64);
+    procedure onBegin(ASender: TObject; AWorkMode: TWorkMode;
+      Max: Int64); override;
+    procedure onWork(ASender: TObject; AWorkMode: TWorkMode;
+      AWorkCount: Int64); override;
+  end;
+
+  TChunkedUploadEventHandler = class(TSimpleDownloadEventHandler)
+    constructor Create(source, destination: string);
+    procedure onWork(ASender: TObject; AWorkMode: TWorkMode;
+      AWorkCount: Int64); override;
+    procedure setCurrentPosition(position: Int64);
+  private
+    FPosition: Int64;
   end;
 
 var
@@ -223,13 +234,12 @@ end;
 function PutSmallFile(f: TFileStream; localFilename: String;
   dropboxFilename: String; overwrite: boolean): Integer;
 var
-  handler: TDownloadEventHandler;
+  handler: TSimpleDownloadEventHandler;
 begin
   SendProgress(localFilename, dropboxFilename, 0);
-  handler := TDownloadEventHandler.Create(localFilename, dropboxFilename);
+  handler := TSimpleDownloadEventHandler.Create(localFilename, dropboxFilename);
   try
-    DropboxClient.putFile(dropboxFilename, f, overwrite, '', handler.onBegin,
-      handler.onWork);
+    DropboxClient.putFile(dropboxFilename, f, overwrite, '', handler);
     if handler.isAborted then
     begin
       // close filestream and delete file
@@ -404,7 +414,7 @@ function FsGetFileW(RemoteName, LocalName: pwidechar; CopyFlags: Integer;
 var
   fs: TFileStream;
   filemode: Word;
-  handler: TDownloadEventHandler;
+  handler: TSimpleDownloadEventHandler;
   remotefilename: string;
 begin
   remotefilename := normalizeDropboxPath(RemoteName);
@@ -432,9 +442,8 @@ begin
         Exit;
       end;
       fs := TFileStream.Create(LocalName, filemode);
-      handler := TDownloadEventHandler.Create(remotefilename, LocalName);
-      DropboxClient.getFile(remotefilename, fs, '', handler.onBegin,
-        handler.onWork);
+      handler := TSimpleDownloadEventHandler.Create(remotefilename, LocalName);
+      DropboxClient.getFile(remotefilename, fs, '', handler);
       if handler.isAborted then
       begin
         // close filestream and delete file
@@ -720,26 +729,26 @@ exports
 
 { ------------------------------------------------------------------ }
 
-{ TDownloadEventHandler }
+{ TSimpleDownloadEventHandler }
 
-constructor TDownloadEventHandler.Create(source, destination: string);
+constructor TSimpleDownloadEventHandler.Create(source, destination: string);
 begin
   Fsource := source;
   FDestination := destination;
   isAborted := False;
 end;
 
-procedure TDownloadEventHandler.onBegin(ASender: TObject; AWorkMode: TWorkMode;
+procedure TSimpleDownloadEventHandler.onBegin(ASender: TObject; AWorkMode: TWorkMode;
   Max: Int64);
 begin
   FMax := Max;
 end;
 
-procedure TDownloadEventHandler.onWork(ASender: TObject; AWorkMode: TWorkMode;
+procedure TSimpleDownloadEventHandler.onWork(ASender: TObject; AWorkMode: TWorkMode;
   AWorkCount: Int64);
 var
   percent: Integer;
-  isAborted: Boolean;
+  isAborted: boolean;
 begin
   if FMax = 0 then
     percent := 0
@@ -766,6 +775,39 @@ begin
       DropboxClient.Free; // automatically free seesion object
   end;
 
+end;
+
+{ TChunkedUploadEventHandler }
+
+constructor TChunkedUploadEventHandler.Create(source, destination: string);
+begin
+
+end;
+
+procedure TChunkedUploadEventHandler.onWork(ASender: TObject;
+  AWorkMode: TWorkMode; AWorkCount: Int64);
+var
+  percent: Integer;
+  isAborted: boolean;
+  totalMax, totalWorkCount: Int64;
+begin
+  totalMax := FMax + FPosition;
+  totalWorkCount := AWorkCount + FPosition;
+  if totalMax = 0 then
+    percent := 0
+  else
+    percent := Round((totalWorkCount * 100) / totalMax);
+  isAborted := SendProgress(Fsource, FDestination, percent);
+  if isAborted then
+  begin
+    DropboxClient.Abort();
+    self.isAborted := True;
+  end;
+end;
+
+procedure TChunkedUploadEventHandler.setCurrentPosition(position: Int64);
+begin
+  FPosition := position;
 end;
 
 begin

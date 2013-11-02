@@ -45,6 +45,13 @@ type
     constructor Create(host: string; e: Exception);
   end;
 
+  TDownloadEventHandler = class abstract
+    procedure onBegin(ASender: TObject; AWorkMode: TWorkMode;
+      Max: Int64); virtual; abstract;
+    procedure onWork(ASender: TObject; AWorkMode: TWorkMode;
+      AWorkCount: Int64); virtual; abstract;
+  end;
+
   TRestClient = class
   private
     FIdHttp: TidHttp;
@@ -57,20 +64,19 @@ type
       Body: string; Headers: TStringList): TMemoryStream;
     function GET_JSON(url: string; Headers: TIdHeaderList = nil): TJSONObject;
     procedure GET(url: string; aContent: TStream; Headers: TIdHeaderList = nil;
-      beginproc: TWorkEvent = nil; progressproc: TWorkEvent = nil); overload;
+      handler: TDownloadEventHandler = nil); overload;
     function GET(url: string; Headers: TIdHeaderList = nil): string; overload;
     function POST(url: string; rawpostParams: TStringList;
       Headers: TIdHeaderList = nil): string; overload;
     procedure POST(url: string; rawpostParams: TStringList; aContent: TStream;
-      Headers: TIdHeaderList = nil; beginproc: TWorkEvent = nil;
-      progressproc: TWorkEvent = nil); overload;
+      Headers: TIdHeaderList = nil; handler: TDownloadEventHandler = nil); overload;
     function POST_JSON(url: string; rawpostParams: TStringList;
       Headers: TIdHeaderList = nil): TJSONObject;
     function PUT(url: string; Body: TStream; Headers: TIdHeaderList = nil;
-      beginproc: TWorkEvent = nil; progressproc: TWorkEvent = nil;
+      handler: TDownloadEventHandler = nil;
       mimeType: String = ''): string; overload;
     function PUT_JSON(url: string; Body: TStream; Headers: TIdHeaderList = nil;
-      beginproc: TWorkEvent = nil; progressproc: TWorkEvent = nil)
+      handler: TDownloadEventHandler = nil)
       : TJSONObject; overload;
     // function POST(url: string; params, headers: TStringList):TJsonObject;
     // function PUT(url, body: string; headers: TStringList): TJsonObject;
@@ -117,23 +123,24 @@ begin
 end;
 
 procedure TRestClient.GET(url: string; aContent: TStream;
-  Headers: TIdHeaderList; beginproc: TWorkEvent; progressproc: TWorkEvent);
+  Headers: TIdHeaderList; handler: TDownloadEventHandler);
 begin
   //
 
   try
     try
 
-      if Assigned(beginproc) then
-        FIdHttp.OnWorkBegin := beginproc;
-      if Assigned(progressproc) then
-        FIdHttp.OnWork := progressproc;
+      if Assigned(handler) then
+      begin
+        FIdHttp.OnWorkBegin := handler.onBegin;
+        FIdHttp.onWork := handler.onWork;
+      end;
       FIdHttp.Request.RawHeaders.Clear;
       if Headers <> nil then
         FIdHttp.Request.RawHeaders.AddStrings(Headers);
       FIdHttp.GET(url, aContent);
     finally
-      FIdHttp.OnWork := nil;
+      FIdHttp.onWork := nil;
       FIdHttp.OnWorkBegin := nil;
     end;
   except
@@ -209,24 +216,25 @@ end;
 
 procedure TRestClient.POST(url: string; rawpostParams: TStringList;
   aContent: TStream; Headers: TIdHeaderList;
-  beginproc, progressproc: TWorkEvent);
+  handler: TDownloadEventHandler);
 begin
   //
 
   try
     try
 
-      if Assigned(beginproc) then
-        FIdHttp.OnWorkBegin := beginproc;
-      if Assigned(progressproc) then
-        FIdHttp.OnWork := progressproc;
+      if Assigned(handler) then
+      begin
+        FIdHttp.OnWorkBegin := handler.onBegin;
+        FIdHttp.onWork := handler.onWork;
+      end;
       FIdHttp.Request.RawHeaders.Clear;
       if Headers <> nil then
         FIdHttp.Request.RawHeaders.AddStrings(Headers);
       FIdHttp.HTTPOptions := [];
       FIdHttp.POST(url, rawpostParams, aContent);
     finally
-      FIdHttp.OnWork := nil;
+      FIdHttp.onWork := nil;
       FIdHttp.OnWorkBegin := nil;
     end;
   except
@@ -287,17 +295,18 @@ begin
 end;
 
 function TRestClient.PUT(url: string; Body: TStream; Headers: TIdHeaderList;
-  beginproc, progressproc: TWorkEvent; mimeType: String): string;
+  handler: TDownloadEventHandler; mimeType: String): string;
 begin
   //
 
   try
     try
 
-      if Assigned(beginproc) then
-        FIdHttp.OnWorkBegin := beginproc;
-      if Assigned(progressproc) then
-        FIdHttp.OnWork := progressproc;
+      if Assigned(handler) then
+      begin
+        FIdHttp.OnWorkBegin := handler.onBegin;
+        FIdHttp.onWork := handler.onWork;
+      end;
       FIdHttp.Request.RawHeaders.Clear;
       if Headers <> nil then
         FIdHttp.Request.RawHeaders.AddStrings(Headers);
@@ -306,7 +315,7 @@ begin
         FIdHttp.Request.ContentType := mimeType;
       Result := FIdHttp.PUT(url, Body);
     finally
-      FIdHttp.OnWork := nil;
+      FIdHttp.onWork := nil;
       FIdHttp.OnWorkBegin := nil;
       FIdHttp.Request.ContentType := '';
     end;
@@ -324,12 +333,12 @@ begin
 end;
 
 function TRestClient.PUT_JSON(url: string; Body: TStream;
-  Headers: TIdHeaderList; beginproc, progressproc: TWorkEvent): TJSONObject;
+  Headers: TIdHeaderList; handler: TDownloadEventHandler): TJSONObject;
 var
   s: string;
 begin
   try
-    s := PUT(url, Body, Headers, beginproc, progressproc);
+    s := PUT(url, Body, Headers, handler);
     Result := TJSONObject.ParseJSONValue(s) as TJSONObject;
   except
     on E3: TJSONException do
@@ -358,10 +367,10 @@ begin
     raise Exception.Create('Non json response');
   FBody := json;
   try
-  FErrorMsg := (json.GET('error').JsonValue as TJSONString).Value;
-  FUserErrorMsg := (json.GET('user_error').JsonValue as TJSONString).Value;
+    FErrorMsg := (json.GET('error').JsonValue as TJSONString).Value;
+    FUserErrorMsg := (json.GET('user_error').JsonValue as TJSONString).Value;
   except
-   // field 'user_error' may be empty
+    // field 'user_error' may be empty
   end;
   if (FUserErrorMsg <> '') and (FUserErrorMsg <> FErrorMsg) then
     msg := Format('%s (%s)', [FUserErrorMsg, FErrorMsg])
