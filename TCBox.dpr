@@ -399,7 +399,6 @@ end;
 function FsInit(PluginNr: Integer; pProgressProc: tProgressProc;
   pLogProc: tLogProc; pRequestProc: tRequestProc): Integer; stdcall;
 begin
-  ShowMessage(_('Minimum Total Commander supported version is 7.50'));
   Result := -1;
 end;
 
@@ -411,6 +410,7 @@ end;
 function FsFindFirst(path: PChar; var FindData: tWIN32FINDDATA)
   : THandle; stdcall;
 begin
+  ShowMessage(_('Minimum Total Commander supported version is 7.50'));
   Result := INVALID_HANDLE_VALUE;
 end;
 
