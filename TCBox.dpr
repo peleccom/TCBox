@@ -159,6 +159,22 @@ begin
   form.Free;
 end;
 
+// Send progress value to TC
+function SendProgress(sourceName: String; targetName: String;
+  percentDone: Integer): boolean;
+var
+  isAbort: Integer;
+begin
+  // some checks
+  isAbort := ProgressProc(PluginNumber, PChar(sourceName), PChar(targetName),
+    percentDone);
+  if (isAbort = 1) then
+    Result := True
+  else
+    Result := False;
+
+end;
+
 function PutBigFile(f: TFileStream; localFilename: String;
   dropboxFilename: String; overwrite: boolean = False): Integer;
 var
@@ -167,7 +183,7 @@ var
   json: TJSONObject;
   percentUpload: byte;
 begin
-  ProgressProc(PluginNumber, PChar(localFilename), PChar(dropboxFilename), 0);
+  SendProgress(localFilename, dropboxFilename, 0);
   size := f.size;
   chunkedUploader := DropboxClient.getChunkedUpload(f, f.size);
   try
@@ -178,8 +194,7 @@ begin
         percentUpload := Round((chunkedUploader.Offset * 100) / size)
       else
         percentUpload := 0;
-      if ProgressProc(PluginNumber, PChar(localFilename),
-        PChar(dropboxFilename), percentUpload) = 1 then
+      if SendProgress(localFilename, dropboxFilename, percentUpload) then
 
       // userabort
       begin
@@ -199,8 +214,7 @@ begin
     if json <> nil then
       json.Free;
     Result := FS_FILE_OK;
-    ProgressProc(PluginNumber, PChar(localFilename),
-      PChar(dropboxFilename), 100);
+    SendProgress(localFilename, dropboxFilename, 100);
   finally
     chunkedUploader.Free;
   end;
@@ -211,7 +225,7 @@ function PutSmallFile(f: TFileStream; localFilename: String;
 var
   handler: TDownloadEventHandler;
 begin
-  ProgressProc(PluginNumber, PChar(localFilename), PChar(dropboxFilename), 0);
+  SendProgress(localFilename, dropboxFilename, 0);
   handler := TDownloadEventHandler.Create(localFilename, dropboxFilename);
   try
     DropboxClient.putFile(dropboxFilename, f, overwrite, '', handler.onBegin,
@@ -231,7 +245,7 @@ begin
   finally
     handler.Free;
   end;
-  ProgressProc(PluginNumber, PChar(localFilename), PChar(dropboxFilename), 100);
+  SendProgress(localFilename, dropboxFilename, 100);
 end;
 
 function FsInitW(PluginNr: Integer; pProgressProcW: tProgressProcW;
@@ -632,14 +646,14 @@ begin
   if (overwrite and newFileExists) = True then
     try
       try
-        ProgressProc(PluginNumber, OldName, NewName, 0);
+        SendProgress(OldName, NewName, 0);
         DropboxClient.delete(newFileName);
       except
         Result := FS_FILE_NOTSUPPORTED;
         Exit;
       end;
     finally
-      ProgressProc(PluginNumber, OldName, NewName, 100);
+      SendProgress(OldName, NewName, 100);
     end;
   try
     if Move = True then
@@ -725,15 +739,14 @@ procedure TDownloadEventHandler.onWork(ASender: TObject; AWorkMode: TWorkMode;
   AWorkCount: Int64);
 var
   percent: Integer;
-  isAborted: Integer;
+  isAborted: Boolean;
 begin
   if FMax = 0 then
     percent := 0
   else
     percent := Round((AWorkCount * 100) / FMax);
-  isAborted := ProgressProc(PluginNumber, PChar(Fsource),
-    PChar(FDestination), percent);
-  if isAborted = 1 then
+  isAborted := SendProgress(Fsource, FDestination, percent);
+  if isAborted then
   begin
     DropboxClient.Abort();
     self.isAborted := True;
