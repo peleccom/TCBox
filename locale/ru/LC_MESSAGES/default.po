@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: TCBox 0.4\n"
 "POT-Creation-Date: 2013-10-20 02:15\n"
-"PO-Revision-Date: 2013-10-20 02:19+0300\n"
+"PO-Revision-Date: 2013-11-02 22:46+0300\n"
 "Last-Translator: peleccom <peleccom@gmail.com>\n"
 "Language-Team: \n"
 "MIME-Version: 1.0\n"
@@ -50,6 +50,10 @@ msgstr "Язык"
 #: SettingUnit.dfm:40
 msgid "Log out"
 msgstr "Выйти из аккаунта"
+
+#: TCBox.dpr:402
+msgid "Minimum Total Commander supported version is 7.50"
+msgstr "Минимальная поддерживаемая версия Total Commander 7.50"
 
 #. ShellExecute fails
 #: LogInUnit.pas:109
